@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚌 等公交互动聊天室</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bus_chat.css') }}">
+</head>
+<body>
+    <!-- 背景装饰 -->
+    <div class="bg-decoration">
+        <div class="bus-icon floating-bus">🚌</div>
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="container-fluid min-vh-100 py-4 position-relative">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-10 col-lg-8 col-xl-7">
+                
+                <!-- 加入聊天室表单 -->
+                <div id="join-form" class="card shadow-lg border-0 animate-fade-in">
+                    <div class="card-header text-center border-0 bg-gradient-primary py-4">
+                        <div class="mb-3">
+                            <i class="bi bi-chat-heart-fill text-white display-3 pulse-animation"></i>
+                        </div>
+                        <h1 class="card-title text-white mb-0 fw-bold">
+                            <i class="bi bi-bus-front me-2"></i>等公交互动聊天室
+                        </h1>
+                        <p class="text-white-50 mt-2 mb-0 small">
+                            <i class="bi bi-geo-alt me-1"></i>在公交车上遇见缘分，等待中也能温暖相遇
+                        </p>
+                    </div>
+                    
+                    <div class="card-body p-5">
+                        <div class="text-center mb-4">
+                            <div class="bus-status-card mb-4">
+                                <div class="bus-icon-large">🚌</div>
+                                <h4 class="mt-3">下一班公交车</h4>
+                                <div class="countdown-display">
+                                    <span id="bus-countdown" class="display-4 fw-bold text-primary">--</span>
+                                    <span class="text-muted">分钟</span>
+                                </div>
+                                <div id="bus-delay-alert" class="alert alert-warning mt-3 d-none">
+                                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                                    <span id="delay-reason">公交车延误中...</span>
+                                </div>
+                            </div>
+                            
+                            <div class="info-box mb-4">
+                                <div class="info-item">
+                                    <i class="bi bi-people-fill text-info"></i>
+                                    <span>当前在线: <strong id="online-count">0</strong> 人</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="bi bi-clock-fill text-success"></i>
+                                    <span>聊天满 <strong>5分钟</strong> 可加好友</span>
+                                </div>
+                                <div class="info-item">
+                                    <i class="bi bi-lightbulb-fill text-warning"></i>
+                                    <span>发车间隔: <strong>2分钟</strong> 一趟</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <form id="username-form">
+                            <div class="mb-4">
+                                <label for="username-input" class="form-label fw-bold">
+                                    <i class="bi bi-person-badge me-2"></i>您的昵称
+                                </label>
+                                <input type="text" 
+                                       class="form-control form-control-lg" 
+                                       id="username-input" 
+                                       placeholder="给自己起个有趣的昵称吧..."
+                                       maxlength="20"
+                                       required>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    昵称将在聊天室中显示，建议使用有趣的名字更容易交朋友哦~
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-lg w-100 rounded-pill">
+                                <i class="bi bi-box-arrow-in-right me-2"></i>加入聊天室
+                            </button>
+                        </form>
+                        
+                        <div class="mt-4 text-center">
+                            <small class="text-muted">
+                                <i class="bi bi-shield-check me-1"></i>
+                                匿名聊天，保护隐私 · 文明交流，传递温暖
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 聊天室界面（初始隐藏） -->
+                <div id="chat-room" class="d-none">
+                    <!-- 顶部状态栏 -->
+                    <div class="card shadow-lg border-0 mb-3 animate-slide-down">
+                        <div class="card-body py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <div class="status-indicator online me-2"></div>
+                                    <div>
+                                        <div class="fw-bold">
+                                            <i class="bi bi-bus-front me-1"></i>
+                                            等公交聊天室
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="bi bi-people me-1"></i>
+                                            <span id="chat-online-count">0</span> 人在线
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div class="badge bg-primary rounded-pill mb-1">
+                                        <i class="bi bi-clock me-1"></i>
+                                        <span id="chat-duration">00:00</span>
+                                    </div>
+                                    <div id="friend-badge" class="badge bg-success rounded-pill d-none">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        可加好友
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 公交车状态卡片 -->
+                    <div id="bus-info-card" class="card shadow-sm border-0 mb-3">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="d-flex align-items-center">
+                                    <div class="bus-emoji me-3">🚌</div>
+                                    <div>
+                                        <div class="fw-bold mb-1">下一班公交车</div>
+                                        <small class="text-muted" id="bus-time-text">预计 -- 分钟后到站</small>
+                                    </div>
+                                </div>
+                                <div class="text-end">
+                                    <div id="bus-countdown-small" class="display-6 fw-bold text-primary mb-0">--</div>
+                                    <small class="text-muted">分钟</small>
+                                </div>
+                            </div>
+                            <div id="bus-delay-info" class="alert alert-warning mt-2 mb-0 d-none py-2">
+                                <small>
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                                    <span id="bus-delay-text">延误原因</span>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 聊天消息区域 -->
+                    <div class="card shadow-lg border-0 mb-3">
+                        <div class="card-header bg-light border-0 py-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="bi bi-chat-dots-fill text-primary me-2"></i>
+                                    聊天消息
+                                </h5>
+                                <span class="badge bg-secondary" id="message-count">0 条消息</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-0">
+                            <div id="chat-messages" class="chat-messages-container">
+                                <div class="text-center py-5 text-muted">
+                                    <i class="bi bi-chat-square-text display-1 opacity-25"></i>
+                                    <p class="mt-3">等待第一条消息...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 输入区域 -->
+                    <div class="card shadow-lg border-0">
+                        <div class="card-body p-3">
+                            <form id="message-form">
+                                <div class="input-group">
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="message-input" 
+                                           placeholder="说点什么吧...（按Enter发送）"
+                                           maxlength="200">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="bi bi-send-fill"></i>
+                                    </button>
+                                </div>
+                                <div class="mt-2 d-flex justify-content-between align-items-center">
+                                    <small class="text-muted">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        请文明交流，尊重他人
+                                    </small>
+                                    <button type="button" id="leave-btn" class="btn btn-outline-danger btn-sm rounded-pill">
+                                        <i class="bi bi-box-arrow-right me-1"></i>离开
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- 底部提示 -->
+                    <div class="alert alert-info mt-3 border-0 shadow-sm">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-lightbulb-fill text-warning fs-5 me-2 mt-1"></i>
+                            <div>
+                                <strong>温馨提示：</strong>
+                                <ul class="mb-0 mt-2 small">
+                                    <li>聊天满5分钟后，可以互相添加好友继续交流</li>
+                                    <li>如果没人在线，可以耐心等待或稍后再来</li>
+                                    <li>公交车每2分钟一班，请耐心等待</li>
+                                    <li>保持礼貌和友善，传递正能量</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 自定义JS -->
+    <script src="{{ url_for('static', filename='js/bus_chat.js') }}"></script>
+</body>
+</html>
