@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-4 agenda-page">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center no-print">
+            <h4 class="mb-0">
+                <i class="bi bi-calendar-check me-2"></i>{{ meeting.theme }}
+            </h4>
+            <div>
+                <div class="btn-group btn-group-sm" role="group">
+                    <a href="{{ url_for('generate_agenda', meeting_db_id=meeting.id, lang='zh') }}" 
+                       class="btn btn-light {% if lang == 'zh' %}active{% endif %}">中文</a>
+                    <a href="{{ url_for('generate_agenda', meeting_db_id=meeting.id, lang='en') }}" 
+                       class="btn btn-light {% if lang == 'en' %}active{% endif %}">EN</a>
+                    <a href="{{ url_for('generate_agenda', meeting_db_id=meeting.id, lang='both') }}" 
+                       class="btn btn-light {% if lang == 'both' %}active{% endif %}">中英</a>
+                </div>
+                <a href="{{ url_for('meeting_detail', meeting_db_id=meeting.id) }}" class="btn btn-sm btn-light ms-2">
+                    <i class="bi bi-arrow-left me-1"></i>返回
+                </a>
+                <button onclick="window.print()" class="btn btn-sm btn-outline-light ms-2">
+                    <i class="bi bi-printer me-1"></i>打印
+                </button>
+            </div>
+        </div>
+        
+        <!-- 打印时显示的标题 -->
+        <div class="d-none d-print-block text-center py-2 border-bottom">
+            <h4 class="mb-1">{{ meeting.theme }}</h4>
+            <small>{{ meeting.meeting_id }} | {{ meeting.time }} | {{ meeting.address or '' }}</small>
+        </div>
+        
+        <div class="card-body p-0">
+            <!-- 会议信息（不打印） -->
+            <div class="p-3 border-bottom no-print">
+                <div class="row">
+                    <div class="col-md-3"><strong>编号：</strong>{{ meeting.meeting_id }}</div>
+                    <div class="col-md-4"><strong>时间：</strong>{{ meeting.time }}</div>
+                    <div class="col-md-5"><strong>地址：</strong>{{ meeting.address or '待定' }}</div>
+                </div>
+            </div>
+
+            <!-- 公共表格：所有Phase共用一个表头 -->
+            <table class="table table-hover mb-0 agenda-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width:70px;">Time</th>
+                        <th>Activity</th>
+                        <th style="width:55px;">Min</th>
+                        <th style="width:130px;">Participant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for phase in PHASE_CONFIG %}
+                        {% set phase_items = [] %}
+                        {% for item in agenda %}
+                            {% if item.phase == phase.key %}
+                                {% set _ = phase_items.append(item) %}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        {% if phase_items %}
+                        <!-- Phase分隔行 -->
+                        <tr>
+                            <td colspan="4" class="{{ phase.color }} phase-header">
+                                {% if lang == 'zh' %}{{ phase.name_zh }}
+                                {% elif lang == 'en' %}{{ phase.name_en }}
+                                {% else %}{{ phase.name_en }} {{ phase.name_zh }}{% endif %}
+                            </td>
+                        </tr>
+                        <!-- Phase下的所有环节 -->
+                        {% for item in phase_items %}
+                        <tr class="{% if item.role == 'TBD' %}tbd-row{% endif %}">
+                            <td class="time-cell">{{ item.time }}</td>
+                            <td>{{ item.activity }}</td>
+                            <td class="text-center">{% if item.duration > 0 %}{{ item.duration }}{% endif %}</td>
+                            <td>
+                                {% if item.role == 'TBD' %}
+                                    <span class="tbd-badge">TBD</span>
+                                {% elif item.role == '' %}
+                                    -
+                                {% else %}
+                                    {{ item.role }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="card-footer text-muted no-print">
+            <small><i class="bi bi-info-circle me-1"></i>
+                {% if lang == 'en' %}Agenda based on registered roles. TBD = not yet assigned.
+                {% else %}Agenda基于已报名角色自动生成，TBD = 待分配。{% endif %}
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.agenda-table td, .agenda-table th {
+    vertical-align: middle;
+    padding: 4px 8px;
+    font-size: 13px;
+}
+.phase-header {
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+.time-cell {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    white-space: nowrap;
+}
+.tbd-badge {
+    color: #dc3545;
+    font-weight: 600;
+    font-size: 11px;
+}
+.tbd-row {
+    background-color: #fff5f5;
+}
+
+/* A4打印优化 */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 12mm 10mm;
+    }
+    .no-print {
+        display: none !important;
+    }
+    body {
+        font-size: 10px;
+        margin: 0;
+        padding: 0;
+    }
+    .container {
+        max-width: 100%;
+        padding: 0;
+        margin: 0;
+    }
+    .card {
+        box-shadow: none !important;
+        border: none !important;
+    }
+    .card-body {
+        padding: 0 !important;
+    }
+    .agenda-table td, .agenda-table th {
+        padding: 2px 4px;
+        font-size: 9px;
+        line-height: 1.3;
+    }
+    .phase-header {
+        font-size: 10px;
+        padding: 2px 4px !important;
+    }
+    .time-cell {
+        font-size: 9px;
+    }
+    .tbd-badge {
+        font-size: 8px;
+    }
+    .table-dark th {
+        font-size: 9px;
+        padding: 2px 4px;
+    }
+    .d-print-block {
+        display: block !important;
+    }
+    .d-print-none {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}

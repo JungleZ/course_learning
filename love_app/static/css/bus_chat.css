@@ -314,9 +314,21 @@ body {
 }
 
 .message-header {
-    font-size: 0.8rem;
-    margin-bottom: 0.25rem;
-    opacity: 0.8;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.view-profile-btn {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 15px;
+    transition: all 0.3s ease;
+}
+
+.view-profile-btn:hover {
+    transform: scale(1.05);
+    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3);
 }
 
 .message-time {

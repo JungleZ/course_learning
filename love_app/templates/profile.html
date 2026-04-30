@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👤 个人资料 - 等公交聊天室</title>
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bus_chat.css') }}">
+    <style>
+        .profile-section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            color: white;
+            margin: 0 auto 1.5rem;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+        
+        .profile-avatar:hover {
+            transform: scale(1.05);
+        }
+        
+        .tag-input {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            margin: 0.3rem;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .tag-input:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .tag-input .remove-tag {
+            margin-left: 0.5rem;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        
+        .tag-input .remove-tag:hover {
+            opacity: 1;
+        }
+        
+        .slider-value {
+            font-weight: bold;
+            color: #667eea;
+            font-size: 1.1rem;
+        }
+        
+        .form-range::-webkit-slider-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .emoji-selector {
+            font-size: 2rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            display: inline-block;
+            margin: 0.3rem;
+        }
+        
+        .emoji-selector:hover {
+            background: rgba(102, 126, 234, 0.1);
+            transform: scale(1.2);
+        }
+        
+        .emoji-selector.selected {
+            background: rgba(102, 126, 234, 0.2);
+            border: 2px solid #667eea;
+        }
+    </style>
+</head>
+<body>
+    <!-- 背景装饰 -->
+    <div class="bg-decoration">
+        <div class="bus-icon floating-bus">🚌</div>
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+    </div>
+
+    <!-- 主容器 -->
+    <div class="container-fluid min-vh-100 py-4 position-relative">
+        <div class="row justify-content-center">
+            <div class="col-12 col-md-10 col-lg-8 col-xl-7">
+                
+                <!-- 返回按钮 -->
+                <div class="mb-3">
+                    <a href="/bus-chat" class="btn btn-outline-light rounded-pill">
+                        <i class="bi bi-arrow-left me-2"></i>返回聊天室
+                    </a>
+                </div>
+
+                <!-- 个人资料表单 -->
+                <div class="card shadow-lg border-0 animate-fade-in">
+                    <div class="card-header text-center border-0 bg-gradient-primary py-4">
+                        <div class="mb-3">
+                            <i class="bi bi-person-badge-fill text-white display-3"></i>
+                        </div>
+                        <h1 class="card-title text-white mb-0 fw-bold">
+                            <i class="bi bi-pencil-square me-2"></i>编辑个人资料
+                        </h1>
+                        <p class="text-white-50 mt-2 mb-0 small">
+                            完善资料，让更多人了解真实的你
+                        </p>
+                    </div>
+                    
+                    <div class="card-body p-4 p-md-5">
+                        <form id="profile-form">
+                            <!-- 头像选择 -->
+                            <div class="text-center mb-4">
+                                <div class="profile-avatar" id="avatar-display">
+                                    😊
+                                </div>
+                                <small class="text-muted">点击选择头像表情</small>
+                                
+                                <div class="mt-3" id="emoji-selector">
+                                    <span class="emoji-selector" data-emoji="😊">😊</span>
+                                    <span class="emoji-selector" data-emoji="😎">😎</span>
+                                    <span class="emoji-selector" data-emoji="🥰">🥰</span>
+                                    <span class="emoji-selector" data-emoji="😄">😄</span>
+                                    <span class="emoji-selector" data-emoji="🤗">🤗</span>
+                                    <span class="emoji-selector" data-emoji="😇">😇</span>
+                                    <span class="emoji-selector" data-emoji="🌟">🌟</span>
+                                    <span class="emoji-selector" data-emoji="🎨">🎨</span>
+                                    <span class="emoji-selector" data-emoji="📚">📚</span>
+                                    <span class="emoji-selector" data-emoji="🎵">🎵</span>
+                                    <span class="emoji-selector" data-emoji="⚽">⚽</span>
+                                    <span class="emoji-selector" data-emoji="🍕">🍕</span>
+                                </div>
+                            </div>
+
+                            <!-- 基本资料 -->
+                            <div class="profile-section">
+                                <h4 class="mb-4">
+                                    <i class="bi bi-person-fill me-2 text-primary"></i>基本资料
+                                </h4>
+                                
+                                <div class="mb-3">
+                                    <label for="nickname" class="form-label fw-bold">
+                                        <i class="bi bi-person-badge me-2"></i>昵称
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="nickname" 
+                                           placeholder="给自己起个有趣的名字"
+                                           maxlength="20"
+                                           required>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
+                                        <label for="age" class="form-label fw-bold">
+                                            <i class="bi bi-calendar me-2"></i>年龄
+                                        </label>
+                                        <input type="number" 
+                                               class="form-control" 
+                                               id="age" 
+                                               placeholder="例如：25"
+                                               min="18"
+                                               max="100">
+                                    </div>
+                                    
+                                    <div class="col-md-6 mb-3">
+                                        <label for="gender" class="form-label fw-bold">
+                                            <i class="bi bi-gender-ambiguous me-2"></i>性别
+                                        </label>
+                                        <select class="form-select" id="gender">
+                                            <option value="">请选择</option>
+                                            <option value="male">男</option>
+                                            <option value="female">女</option>
+                                            <option value="other">其他</option>
+                                            <option value="prefer-not-to-say">保密</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="city" class="form-label fw-bold">
+                                        <i class="bi bi-geo-alt me-2"></i>所在城市
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="city" 
+                                           placeholder="例如：北京、上海、广州">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="occupation" class="form-label fw-bold">
+                                        <i class="bi bi-briefcase me-2"></i>职业
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="occupation" 
+                                           placeholder="例如：程序员、设计师、教师">
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="bio" class="form-label fw-bold">
+                                        <i class="bi bi-chat-quote me-2"></i>个人简介
+                                    </label>
+                                    <textarea class="form-control" 
+                                              id="bio" 
+                                              rows="3" 
+                                              placeholder="用一句话介绍自己..."
+                                              maxlength="200"></textarea>
+                                    <div class="form-text">最多200个字符</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="wechat" class="form-label fw-bold">
+                                        <i class="bi bi-wechat me-2 text-success"></i>微信号
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control" 
+                                           id="wechat" 
+                                           placeholder="输入您的微信号（可选）">
+                                    <div class="form-text">
+                                        <small><i class="bi bi-shield-check me-1"></i>仅在聊天满5分钟后可见，保护隐私</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 兴趣爱好 -->
+                            <div class="profile-section">
+                                <h4 class="mb-4">
+                                    <i class="bi bi-heart-fill me-2 text-danger"></i>兴趣爱好
+                                </h4>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-tags me-2"></i>兴趣标签
+                                    </label>
+                                    <div class="mb-2">
+                                        <input type="text" 
+                                               class="form-control" 
+                                               id="tag-input" 
+                                               placeholder="输入兴趣后按回车添加">
+                                    </div>
+                                    <div id="tags-container" class="d-flex flex-wrap">
+                                        <!-- 标签将在这里动态显示 -->
+                                    </div>
+                                    <div class="form-text mt-2">
+                                        <small>推荐：阅读、旅行、音乐、电影、运动、美食、摄影、游戏等</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 价值观 -->
+                            <div class="profile-section">
+                                <h4 class="mb-4">
+                                    <i class="bi bi-lightbulb-fill me-2 text-warning"></i>价值观与生活观
+                                </h4>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-graph-up me-2"></i>工作与生活平衡
+                                    </label>
+                                    <input type="range" 
+                                           class="form-range" 
+                                           id="work-life-balance" 
+                                           min="0" 
+                                           max="100" 
+                                           value="50">
+                                    <div class="d-flex justify-content-between text-muted small">
+                                        <span>工作优先</span>
+                                        <span class="slider-value" id="work-life-value">50%</span>
+                                        <span>生活优先</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-cash-stack me-2"></i>消费观念
+                                    </label>
+                                    <input type="range" 
+                                           class="form-range" 
+                                           id="spending-habit" 
+                                           min="0" 
+                                           max="100" 
+                                           value="50">
+                                    <div class="d-flex justify-content-between text-muted small">
+                                        <span>节俭型</span>
+                                        <span class="slider-value" id="spending-value">50%</span>
+                                        <span>享受型</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-4">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-people me-2"></i>社交偏好
+                                    </label>
+                                    <input type="range" 
+                                           class="form-range" 
+                                           id="social-preference" 
+                                           min="0" 
+                                           max="100" 
+                                           value="50">
+                                    <div class="d-flex justify-content-between text-muted small">
+                                        <span>内向宅家</span>
+                                        <span class="slider-value" id="social-value">50%</span>
+                                        <span>外向社交</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-check-circle me-2"></i>重要价值观（多选）
+                                    </label>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="value-honesty" value="诚实">
+                                                <label class="form-check-label" for="value-honesty">诚实守信</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="value-kindness" value="善良">
+                                                <label class="form-check-label" for="value-kindness">善良友爱</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="value-responsibility" value="责任">
+                                                <label class="form-check-label" for="value-responsibility">责任担当</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="value-respect" value="尊重">
+                                                <label class="form-check-label" for="value-respect">相互尊重</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="value-growth" value="成长">
+                                                <label class="form-check-label" for="value-growth">持续成长</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="value-freedom" value="自由">
+                                                <label class="form-check-label" for="value-freedom">自由独立</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="value-family" value="家庭">
+                                                <label class="form-check-label" for="value-family">重视家庭</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="value-career" value="事业">
+                                                <label class="form-check-label" for="value-career">事业成就</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 生活方式 -->
+                            <div class="profile-section">
+                                <h4 class="mb-4">
+                                    <i class="bi bi-house-heart-fill me-2 text-success"></i>生活方式
+                                </h4>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-clock me-2"></i>作息时间
+                                    </label>
+                                    <select class="form-select" id="sleep-schedule">
+                                        <option value="">请选择</option>
+                                        <option value="early-bird">早起鸟（6点前起床）</option>
+                                        <option value="normal">正常作息（6-8点起床）</option>
+                                        <option value="night-owl">夜猫子（8点后起床）</option>
+                                        <option value="irregular">不规律</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-cup-hot me-2"></i>饮食习惯
+                                    </label>
+                                    <select class="form-select" id="diet-habit">
+                                        <option value="">请选择</option>
+                                        <option value="omnivore">不挑食，什么都吃</option>
+                                        <option value="healthy">健康饮食，少油少盐</option>
+                                        <option value="vegetarian">素食主义者</option>
+                                        <option value="foodie">美食爱好者，喜欢探索</option>
+                                        <option value="simple">简单就好，不讲究</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-activity me-2"></i>运动频率
+                                    </label>
+                                    <select class="form-select" id="exercise-frequency">
+                                        <option value="">请选择</option>
+                                        <option value="daily">每天运动</option>
+                                        <option value="often">经常运动（每周3-5次）</option>
+                                        <option value="sometimes">偶尔运动（每周1-2次）</option>
+                                        <option value="rarely">很少运动</option>
+                                        <option value="never">几乎不运动</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-book me-2"></i>学习成长
+                                    </label>
+                                    <textarea class="form-control" 
+                                              id="learning-goal" 
+                                              rows="2" 
+                                              placeholder="你最近在学什么？或者有什么学习计划？"></textarea>
+                                </div>
+                            </div>
+
+                            <!-- 期望与目标 -->
+                            <div class="profile-section">
+                                <h4 class="mb-4">
+                                    <i class="bi bi-star-fill me-2 text-info"></i>期望与目标
+                                </h4>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-chat-dots me-2"></i>希望通过聊天认识什么样的人
+                                    </label>
+                                    <textarea class="form-control" 
+                                              id="expectation" 
+                                              rows="3" 
+                                              placeholder="例如：志同道合的朋友、可以交流兴趣爱好的伙伴..."></textarea>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="bi bi-lightning-fill me-2"></i>最想聊的话题
+                                    </label>
+                                    <div class="row">
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="topic-travel" value="旅行">
+                                                <label class="form-check-label" for="topic-travel">旅行见闻</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="topic-movie" value="电影">
+                                                <label class="form-check-label" for="topic-movie">电影电视剧</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="topic-music" value="音乐">
+                                                <label class="form-check-label" for="topic-music">音乐艺术</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="topic-tech" value="科技">
+                                                <label class="form-check-label" for="topic-tech">科技数码</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="topic-food" value="美食">
+                                                <label class="form-check-label" for="topic-food">美食烹饪</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="topic-life" value="生活">
+                                                <label class="form-check-label" for="topic-life">生活感悟</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="topic-career" value="职场">
+                                                <label class="form-check-label" for="topic-career">职场发展</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6 mb-2">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="topic-love" value="情感">
+                                                <label class="form-check-label" for="topic-love">情感恋爱</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- 提交按钮 -->
+                            <div class="d-grid gap-2">
+                                <button type="submit" class="btn btn-primary btn-lg rounded-pill">
+                                    <i class="bi bi-check-circle me-2"></i>保存个人资料
+                                </button>
+                                <button type="button" id="preview-btn" class="btn btn-outline-secondary btn-lg rounded-pill">
+                                    <i class="bi bi-eye me-2"></i>预览资料
+                                </button>
+                            </div>
+                            
+                            <div class="mt-3 text-center">
+                                <small class="text-muted">
+                                    <i class="bi bi-shield-check me-1"></i>
+                                    资料仅存储在本地浏览器中，保护您的隐私
+                                </small>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 自定义JS -->
+    <script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+</body>
+</html>

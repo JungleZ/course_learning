@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0"><i class="bi bi-calendar-plus me-2"></i>创建新会议</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('create_meeting') }}">
+                    <div class="mb-3">
+                        <label for="meeting_id" class="form-label">会议编号 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="meeting_id" name="meeting_id" required
+                               placeholder="例如：20260501-FS-EN" value="20260501-FS-EN">
+                        <div class="form-text">建议使用日期+俱乐部缩写+序号，如20260501-FS-EN</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="theme" class="form-label">会议主题 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="theme" name="theme" required
+                               value="不被算法取代的你：致敬未来劳动者">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="time" class="form-label">会议时间 <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="time" name="time" required
+                               value="2026/5/1 周五晚（19:30-21:30，19:00 签到）">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="address" class="form-label">会议地址/线上链接</label>
+                        <input type="text" class="form-control" id="address" name="address"
+                               value="线上腾讯会议号：208844097">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="fee_info" class="form-label">费用说明</label>
+                        <textarea class="form-control" id="fee_info" name="fee_info" rows="3">✅ 头马会员免费
+✅ 嘉宾免费（开放部分角色给嘉宾；所有角色开放给会员）</textarea>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary me-md-2">
+                            <i class="bi bi-arrow-left me-1"></i>返回列表
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg me-1"></i>创建会议
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-muted">
+                <small>创建会议后将自动添加所有默认角色（包括备稿演讲最多4个、个评最多4个及其他常见角色）</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

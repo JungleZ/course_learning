@@ -17,8 +17,10 @@ def run_app():
         # Set environment variables for Flask
         os.environ['FLASK_APP'] = 'app.py'
         os.environ['FLASK_ENV'] = 'development'
+        # Get port from environment variable, default to 8081 to avoid 8080 and 8090
+        port = os.environ.get('PORT', 8081)
         # Run the app
-        subprocess.check_call([sys.executable, "-m", "flask", "run", "--host=0.0.0.0", "--port=5000"])
+        subprocess.check_call([sys.executable, "-m", "flask", "run", "--host=0.0.0.0", "--port=" + str(port)])
     except subprocess.CalledProcessError as e:
         print(f"Failed to run the application: {e}")
         sys.exit(1)

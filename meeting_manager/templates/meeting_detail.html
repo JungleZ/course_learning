@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <!-- 会议基本信息 -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="bi bi-calendar-event me-2"></i>会议详情</h4>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ meeting.theme }}</h5>
+                <p class="card-text">
+                    <i class="bi bi-upc-scan me-1"></i><strong>编号：</strong>{{ meeting.meeting_id }}<br>
+                    <i class="bi bi-clock me-1"></i><strong>时间：</strong>{{ meeting.time }}<br>
+                    {% if meeting.address %}
+                    <i class="bi bi-geo-alt me-1"></i><strong>地址：</strong>{{ meeting.address }}<br>
+                    {% endif %}
+                    {% if meeting.fee_info %}
+                    <i class="bi bi-cash me-1"></i><strong>费用：</strong><br>
+                    <small>{{ meeting.fee_info|replace('\n', '<br>')|safe }}</small>
+                    {% endif %}
+                </p>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>返回列表
+                </a>
+            </div>
+        </div>
+        
+        <!-- 已报名人员列表 -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-people me-2"></i>已报名人员 ({{ registered_members|length }})</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if registered_members %}
+                <ul class="list-group list-group-flush">
+                    {% for member in registered_members %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ member.member_name }}
+                        {% if member.is_member %}
+                        <span class="badge bg-primary rounded-pill">会员</span>
+                        {% else %}
+                        <span class="badge bg-secondary rounded-pill">嘉宾</span>
+                        {% endif %}
+                        <small class="text-muted">{{ member.roles }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="card-body text-center text-muted">
+                    <i class="bi bi-person-plus"></i> 暂无人员报名
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 生成Agenda按钮 -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-body text-center">
+                <a href="{{ url_for('generate_agenda', meeting_db_id=meeting.id) }}" class="btn btn-success btn-lg w-100">
+                    <i class="bi bi-calendar-check me-2"></i>生成6阶段会议Agenda
+                </a>
+                <div class="form-text mt-2">
+                    基于已报名角色自动生成包含签到、即兴演讲、备稿演讲、休息、点评、闭幕的完整议程
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 角色列表及报名 -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0"><i class="bi bi-list-check me-2"></i>角色列表 & 报名</h4>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>角色名称</th>
+                                <th>角色描述</th>
+                                <th>状态</th>
+                                <th>报名人</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for role in roles %}
+                            <tr>
+                                <td><strong>{{ role.role_name }}</strong></td>
+                                <td><small class="text-muted">{{ role.description or '暂无描述' }}</small></td>
+                                <td>
+                                    {% if role.member_name %}
+                                    <span class="badge bg-success">已报名</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary">待报名</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if role.member_name %}
+                                    {{ role.member_name }}
+                                    {% if role.is_member %}
+                                    <span class="badge bg-primary ms-1">会员</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary ms-1">嘉宾</span>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if not role.member_name %}
+                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" 
+                                            data-bs-target="#registerForm{{ loop.index }}" aria-expanded="false">
+                                        <i class="bi bi-pencil me-1"></i>报名
+                                    </button>
+                                    <div class="collapse mt-2" id="registerForm{{ loop.index }}">
+                                        <form method="POST" action="{{ url_for('register') }}">
+                                            <input type="hidden" name="meeting_db_id" value="{{ meeting.id }}">
+                                            <input type="hidden" name="role_name" value="{{ role.role_name }}">
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" name="member_name" 
+                                                       placeholder="输入姓名" required>
+                                                <div class="input-group-text">
+                                                    <div class="form-check mb-0">
+                                                        <input class="form-check-input" type="checkbox" 
+                                                               name="is_member" value="1" id="memberCheck{{ loop.index }}">
+                                                        <label class="form-check-label" for="memberCheck{{ loop.index }}">
+                                                            会员
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <button class="btn btn-primary" type="submit">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted small">已锁定</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-muted">
+                <small><i class="bi bi-info-circle me-1"></i>同一角色同一会议只能被一人报名；同一人同一会议只能报名一个角色</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// 自动关闭flash消息
+document.addEventListener('DOMContentLoaded', function() {
+    var alerts = document.querySelectorAll('.alert');
+    alerts.forEach(function(alert) {
+        setTimeout(function() {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 3000);
+    });
+});
+</script>
+{% endblock %}

@@ -2,6 +2,7 @@ from flask import Flask, render_template, jsonify, request
 import random
 import time
 from datetime import datetime
+import uuid
 
 app = Flask(__name__)
 
@@ -181,6 +182,11 @@ def bus_chat():
     """等公交聊天室页面"""
     return render_template('bus_chat.html')
 
+@app.route('/profile')
+def profile():
+    """个人资料页面"""
+    return render_template('profile.html')
+
 @app.route('/api/quote')
 def get_quote():
     # Return a random quote with category info
@@ -315,16 +321,43 @@ def leave_chat():
     user_id = data.get('user_id')
     
     if user_id in online_users:
-        username = online_users.pop(user_id)['username']
-        system_msg = {
+        username = online_users[user_id]['username']
+        del online_users[user_id]
+        
+        # 添加系统消息
+        system_message = {
+            'id': str(uuid.uuid4()),
             'type': 'system',
             'message': f'{username} 离开了聊天室',
-            'timestamp': time.time(),
-            'online_count': len(online_users)
+            'timestamp': datetime.now().isoformat()
         }
-        chat_messages.append(system_msg)
+        chat_messages.append(system_message)
+        
+        # 清理超过50条的消息
+        if len(chat_messages) > 50:
+            chat_messages[:] = chat_messages[-50:]
     
     return jsonify({'success': True})
+
+@app.route('/api/chat/user-profile', methods=['GET'])
+def get_user_profile():
+    """获取用户的个人资料（模拟从localStorage获取）"""
+    user_id = request.args.get('user_id')
+    
+    # 在实际应用中，这里应该从数据库或Redis获取
+    # 由于我们使用localStorage，前端会直接访问自己的存储
+    # 这个API主要用于验证和返回基本用户信息
+    
+    if user_id and user_id in online_users:
+        user_info = online_users[user_id]
+        return jsonify({
+            'success': True,
+            'user_id': user_id,
+            'username': user_info['username'],
+            'join_time': user_info['join_time']
+        })
+    
+    return jsonify({'success': False, 'error': '用户不存在'}), 404
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
