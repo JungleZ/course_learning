@@ -32,12 +32,27 @@
         </div>
         
         <div class="card-body p-0">
-            <!-- 会议信息（不打印） -->
+            <!-- 会议信息（支持多语言） -->
             <div class="p-3 border-bottom no-print">
                 <div class="row">
-                    <div class="col-md-3"><strong>编号：</strong>{{ meeting.meeting_id }}</div>
-                    <div class="col-md-4"><strong>时间：</strong>{{ meeting.time }}</div>
-                    <div class="col-md-5"><strong>地址：</strong>{{ meeting.address or '待定' }}</div>
+                    <div class="col-md-3">
+                        {% if lang == 'en' %}<strong>No.:</strong>
+                        {% elif lang == 'both' %}<strong>编号 No.:</strong>
+                        {% else %}<strong>编号：</strong>{% endif %}
+                        {{ meeting.meeting_id }}
+                    </div>
+                    <div class="col-md-4">
+                        {% if lang == 'en' %}<strong>Time:</strong>
+                        {% elif lang == 'both' %}<strong>时间 Time:</strong>
+                        {% else %}<strong>时间：</strong>{% endif %}
+                        {{ meeting.time }}
+                    </div>
+                    <div class="col-md-5">
+                        {% if lang == 'en' %}<strong>Venue:</strong>
+                        {% elif lang == 'both' %}<strong>地址 Venue:</strong>
+                        {% else %}<strong>地址：</strong>{% endif %}
+                        {{ meeting.address or 'TBD' }}
+                    </div>
                 </div>
             </div>
 

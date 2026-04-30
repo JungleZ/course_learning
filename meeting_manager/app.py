@@ -1,9 +1,41 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
 import sqlite3
+import re
 
 app = Flask(__name__)
 app.secret_key = 'meeting_manager_secret_key'
 DB_PATH = 'meeting.db'
+
+def parse_meeting_start_time(time_str):
+    """从会议时间字符串中提取开始时间（分钟）
+    
+    优先使用会议正式时间（如19:30-），而不是签到时间（如19:00签到）
+    """
+    if not time_str:
+        return 19 * 60 + 30  # 默认19:30
+    
+    # 优先匹配会议正式时间（19:30- 这种格式，在括号内）
+    match = re.search(r'（(\d{1,2}):(\d{2})', time_str)
+    if match:
+        hour = int(match.group(1))
+        minute = int(match.group(2))
+        return hour * 60 + minute
+    
+    # 备选：匹配 19:30- 这种格式
+    match = re.search(r'(\d{1,2}):(\d{2})\s*-', time_str)
+    if match:
+        hour = int(match.group(1))
+        minute = int(match.group(2))
+        return hour * 60 + minute
+    
+    # 最后备选：签到时间（19:00签到）
+    match = re.search(r'(\d{1,2}):(\d{2})\s*签到', time_str)
+    if match:
+        hour = int(match.group(1))
+        minute = int(match.group(2))
+        return hour * 60 + minute
+    
+    return 19 * 60 + 30  # 默认19:30
 
 DEFAULT_ROLES = [
     '会议经理(MM)', '接待官(SAA)', '总主持(TOM)', '时间官(Timer)', 
@@ -33,8 +65,8 @@ PHASE_TEMPLATES = {
         {"activity_zh": "TOM介绍会议角色", "activity_en": "TOM's Introduction of facilitators", "duration": 2, "role": "总主持(TOM)"},
         {"activity_zh": "摄影师介绍", "activity_en": "Introduction of Photographer", "duration": 1, "role": "摄影师(Photographer)"},
         {"activity_zh": "时间官介绍", "activity_en": "Introduction of Timer", "duration": 2, "role": "时间官(Timer)"},
-        {"activity_zh": "哼哈官介绍", "activity_en": "Introduction of Ah Counter", "duration": 0, "role": "哼哈官(Ah-Counter)"},
-        {"activity_zh": "语法官介绍", "activity_en": "Introduction of Grammarian", "duration": 0, "role": "语法官(Grammarian)"},
+        {"activity_zh": "哼哈官介绍", "activity_en": "Introduction of Ah Counter", "duration": 2, "role": "哼哈官(Ah-Counter)"},
+        {"activity_zh": "语法官介绍", "activity_en": "Introduction of Grammarian", "duration": 2, "role": "语法官(Grammarian)"},
         {"activity_zh": "总点评介绍", "activity_en": "Introduction of General Evaluator", "duration": 2, "role": "总点评(GE)"},
         {"activity_zh": "自由分享", "activity_en": "Free Sharing", "duration": 2, "role": "自由分享(Free Sharing)"},
     ],
@@ -157,6 +189,140 @@ def create_meeting():
             conn.close()
     return render_template('create_meeting.html')
 
+@app.route('/meeting/<int:meeting_db_id>/edit', methods=['GET', 'POST'])
+def edit_meeting(meeting_db_id):
+    """编辑会议信息"""
+    conn = get_db_connection()
+    meeting = conn.execute('SELECT * FROM meetings WHERE id = ?', (meeting_db_id,)).fetchone()
+    if not meeting:
+        flash('会议不存在！', 'danger')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        theme = request.form['theme']
+        time = request.form['time']
+        address = request.form.get('address', '')
+        fee_info = request.form.get('fee_info', '')
+        
+        conn.execute("""
+            UPDATE meetings SET theme = ?, time = ?, address = ?, fee_info = ?
+            WHERE id = ?
+        """, (theme, time, address, fee_info, meeting_db_id))
+        conn.commit()
+        flash('会议信息已更新！', 'success')
+        conn.close()
+        return redirect(url_for('meeting_detail', meeting_db_id=meeting_db_id))
+    
+    conn.close()
+    return render_template('edit_meeting.html', meeting=meeting)
+
+@app.route('/meeting/<int:meeting_db_id>/export')
+def export_meeting_csv(meeting_db_id):
+    """导出会议报名数据为CSV"""
+    conn = get_db_connection()
+    meeting = conn.execute('SELECT * FROM meetings WHERE id = ?', (meeting_db_id,)).fetchone()
+    if not meeting:
+        flash('会议不存在！', 'danger')
+        return redirect(url_for('index'))
+    
+    # 获取所有报名记录
+    registrations = conn.execute("""
+        SELECT reg.role_name, reg.member_name, reg.registration_time, m.is_member
+        FROM registrations reg
+        LEFT JOIN members m ON reg.member_name = m.name
+        WHERE reg.meeting_id = ?
+        ORDER BY reg.role_name
+    """, (meeting_db_id,)).fetchall()
+    conn.close()
+    
+    # 生成CSV
+    import csv
+    from flask import make_response
+    
+    meeting_id = meeting['meeting_id']
+    meeting_theme = meeting['theme']
+    meeting_time = meeting['time']
+    meeting_address = meeting['address']
+    
+    response = make_response()
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8-sig'
+    response.headers['Content-Disposition'] = f'attachment; filename={meeting_id}_participants.csv'
+    
+    import io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # 标题行
+    writer.writerow(['会议编号', '会议主题', '时间', '地址', '角色', '参会人员', '类型', '报名时间'])
+    
+    # 数据行
+    for reg in registrations:
+        member_type = '会员' if reg['is_member'] else '嘉宾'
+        writer.writerow([
+            meeting_id,
+            meeting_theme,
+            meeting_time,
+            meeting_address or '',
+            reg['role_name'],
+            reg['member_name'],
+            member_type,
+            reg['registration_time']
+        ])
+    
+    response.data = output.getvalue()
+    return response
+
+@app.route('/export/all')
+def export_all_meetings():
+    """导出所有会议报名汇总统计CSV"""
+    conn = get_db_connection()
+    
+    # 获取所有会议
+    meetings = conn.execute('SELECT * FROM meetings ORDER BY created_at DESC').fetchall()
+    
+    # 获取所有报名记录
+    all_regs = conn.execute("""
+        SELECT reg.meeting_id, m.name, m.is_member, GROUP_CONCAT(reg.role_name) as roles
+        FROM registrations reg
+        LEFT JOIN members m ON reg.member_name = m.name
+        GROUP BY reg.meeting_id, reg.member_name
+    """).fetchall()
+    conn.close()
+    
+    # 统计每个角色的参会次数
+    role_count = {}
+    for reg in all_regs:
+        if reg['roles']:
+            for role in reg['roles'].split(','):
+                role = role.strip()
+                if role not in role_count:
+                    role_count[role] = set()
+                if reg['name']:
+                    role_count[role].add(reg['name'])
+    
+    # 生成CSV
+    import csv
+    from flask import make_response
+    
+    response = make_response()
+    response.headers['Content-Type'] = 'text/csv; charset=utf-8-sig'
+    response.headers['Content-Disposition'] = 'attachment; filename=role_statistics.csv'
+    
+    import io
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # 标题行
+    writer.writerow(['角色', '参会次数', '参会人员列表'])
+    
+    # 数据行
+    for role in sorted(role_count.keys()):
+        members = list(role_count[role])
+        writer.writerow([role, len(members), ', '.join(sorted(members))])
+    
+    response.data = output.getvalue()
+    return response
+
 @app.route('/meeting/<int:meeting_db_id>')
 def meeting_detail(meeting_db_id):
     conn = get_db_connection()
@@ -196,7 +362,8 @@ def generate_agenda(meeting_db_id):
     regs = conn.execute('SELECT role_name, member_name FROM registrations WHERE meeting_id = ?', (meeting_db_id,)).fetchall()
     reg_dict = {r['role_name']: r['member_name'] for r in regs}
     
-    current_min = 19 * 60  # 19:00
+    # 从会议信息中提取开始时间
+    current_min = parse_meeting_start_time(meeting['time'])
     agenda = []
     
     for phase in PHASE_CONFIG:
