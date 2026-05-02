@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd c:\\\\Users\\\\v-jaggerzhang\\\\Downloads\\\\opencodeProj\\\\meeting_manager; python -c \"import app; print\\(app\\.parse_wechat_signup\\('MM：Guiling/Sibley\\\\n主持人：张三'\\)\\); print\\(app\\.parse_meeting_from_post\\('#接龙\\\\nGEM# 123 Meeting\\\\n地址：测试地址\\\\nMM：Guiling\\\\nSAA：李四\\\\n'\\)\\)\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

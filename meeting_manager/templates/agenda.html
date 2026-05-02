@@ -5,35 +5,27 @@
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center no-print">
             <h4 class="mb-0">
-                <i class="bi bi-calendar-check me-2"></i>{{ meeting.theme }}
+                <i class="bi bi-calendar-check me-2"></i>{% set display_theme = meeting.english_theme if (lang == 'en' and meeting.english_theme) else meeting.theme %}{{ display_theme }}
             </h4>
             <div>
-                <div class="btn-group btn-group-sm" role="group">
-                    <a href="{{ url_for('generate_agenda', meeting_db_id=meeting.id, lang='zh') }}" 
-                       class="btn btn-light {% if lang == 'zh' %}active{% endif %}">中文</a>
-                    <a href="{{ url_for('generate_agenda', meeting_db_id=meeting.id, lang='en') }}" 
-                       class="btn btn-light {% if lang == 'en' %}active{% endif %}">EN</a>
-                    <a href="{{ url_for('generate_agenda', meeting_db_id=meeting.id, lang='both') }}" 
-                       class="btn btn-light {% if lang == 'both' %}active{% endif %}">中英</a>
-                </div>
-                <a href="{{ url_for('meeting_detail', meeting_db_id=meeting.id) }}" class="btn btn-sm btn-light ms-2">
-                    <i class="bi bi-arrow-left me-1"></i>返回
+                <a href="{{ url_for('meeting_detail', meeting_db_id=meeting.id) }}" class="btn btn-sm btn-light">
+                    <i class="bi bi-arrow-left me-1"></i>{% if lang == 'en' %}Back{% elif lang == 'both' %}返回 Back{% else %}返回{% endif %}
                 </a>
                 <button onclick="window.print()" class="btn btn-sm btn-outline-light ms-2">
-                    <i class="bi bi-printer me-1"></i>打印
+                    <i class="bi bi-printer me-1"></i>{% if lang == 'en' %}Print{% elif lang == 'both' %}打印 Print{% else %}打印{% endif %}
                 </button>
             </div>
         </div>
         
-        <!-- 打印时显示的标题 -->
+<!-- 打印时显示的标题 -->
         <div class="d-none d-print-block text-center py-2 border-bottom">
-            <h4 class="mb-1">{{ meeting.theme }}</h4>
-            <small>{{ meeting.meeting_id }} | {{ meeting.time }} | {{ meeting.address or '' }}</small>
+            <h4 class="mb-1">{% set display_theme = meeting.english_theme if (lang == 'en' and meeting.english_theme) else meeting.theme %}{{ display_theme }}</h4>
+            <small>{% if lang == 'en' and meeting.time_en %}{{ meeting.time_en }}{% else %}{{ meeting.time }}{% endif %} | {% if lang == 'en' and meeting.address_en %}{{ meeting.address_en }}{% else %}{{ meeting.address or '' }}{% endif %}</small>
         </div>
         
         <div class="card-body p-0">
             <!-- 会议信息（支持多语言） -->
-            <div class="p-3 border-bottom no-print">
+<div class="p-3 border-bottom no-print">
                 <div class="row">
                     <div class="col-md-3">
                         {% if lang == 'en' %}<strong>No.:</strong>
@@ -45,13 +37,31 @@
                         {% if lang == 'en' %}<strong>Time:</strong>
                         {% elif lang == 'both' %}<strong>时间 Time:</strong>
                         {% else %}<strong>时间：</strong>{% endif %}
-                        {{ meeting.time }}
+                        {% if lang == 'en' and meeting.time_en %}{{ meeting.time_en }}{% else %}{{ meeting.time }}{% endif %}
                     </div>
                     <div class="col-md-5">
                         {% if lang == 'en' %}<strong>Venue:</strong>
                         {% elif lang == 'both' %}<strong>地址 Venue:</strong>
                         {% else %}<strong>地址：</strong>{% endif %}
-                        {{ meeting.address or 'TBD' }}
+                        {% if lang == 'en' and meeting.address_en %}{{ meeting.address_en }}{% else %}{{ meeting.address or 'TBD' }}{% endif %}
+                    </div>
+                </div>
+            </div>
+                    <div class="col-md-4">
+                        {% if lang == 'en' %}<strong>Time:</strong>
+                        {% elif lang == 'both' %}<strong>时间 Time:</strong>
+                        {% else %}<strong>时间：</strong>{% endif %}
+                        {% if lang == 'en' and meeting.time_en %}{{ format_time_24h(meeting.time_en) }}
+                        {% elif lang == 'both' %}{{ format_time_24h(meeting.time) }} / {{ format_time_24h(meeting.time_en) if meeting.time_en else 'TBD' }}
+                        {% else %}{{ format_time_24h(meeting.time) }}{% endif %}
+                    </div>
+                    <div class="col-md-5">
+                        {% if lang == 'en' %}<strong>Venue:</strong>
+                        {% elif lang == 'both' %}<strong>地址 Venue:</strong>
+                        {% else %}<strong>地址：</strong>{% endif %}
+                        {% if lang == 'en' and meeting.address_en %}{{ meeting.address_en }}
+                        {% elif lang == 'both' %}{{ meeting.address or 'TBD' }} / {{ meeting.address_en or 'TBD' }}
+                        {% else %}{{ meeting.address or 'TBD' }}{% endif %}
                     </div>
                 </div>
             </div>
@@ -60,10 +70,10 @@
             <table class="table table-hover mb-0 agenda-table">
                 <thead class="table-dark">
                     <tr>
-                        <th style="width:70px;">Time</th>
-                        <th>Activity</th>
-                        <th style="width:55px;">Min</th>
-                        <th style="width:130px;">Participant</th>
+                        <th style="width:70px;">{% if lang == 'en' %}Time{% elif lang == 'both' %}时间 Time{% else %}时间{% endif %}</th>
+                        <th>{% if lang == 'en' %}Activity{% elif lang == 'both' %}活动 Activity{% else %}活动{% endif %}</th>
+                        <th style="width:55px;">{% if lang == 'en' %}Min{% elif lang == 'both' %}分钟 Min{% else %}分钟{% endif %}</th>
+                        <th style="width:130px;">{% if lang == 'en' %}Participant{% elif lang == 'both' %}参与者 Participant{% else %}参与者{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -93,7 +103,7 @@
                             <td>
                                 {% if item.role == 'TBD' %}
                                     <span class="tbd-badge">TBD</span>
-                                {% elif item.role == '' %}
+                                {% elif item.role == '' or item.role == '-' %}
                                     -
                                 {% else %}
                                     {{ item.role }}

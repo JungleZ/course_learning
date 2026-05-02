@@ -1,52 +1,191 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 import sqlite3
 import re
 
 app = Flask(__name__)
 app.secret_key = 'meeting_manager_secret_key'
+app.config['SESSION_PERMANENT'] = False
+app.config['SESSION_TYPE'] = 'filesystem'
 DB_PATH = 'meeting.db'
+
+# 全局语言设置路由
+@app.route('/set_lang/<lang>')
+def set_language(lang):
+    """设置全局语言"""
+    session['lang'] = lang
+    # 返回上一页
+    return redirect(request.referrer or url_for('index'))
+
+@app.before_request
+def before_request():
+    """每个请求默认语言为中文"""
+    if 'lang' not in session:
+        session['lang'] = 'zh'
 
 def parse_meeting_start_time(time_str):
     """从会议时间字符串中提取开始时间（分钟）
     
-    优先使用会议正式时间（如19:30-），而不是签到时间（如19:00签到）
+    优先使用会议正式时间（如19:30-），而不是签到时间（如19:00 Sign-in）
+    支持中英文格式，包括：19:30, 7:30pm, 7:30 PM, 晚上7点半等
+    最终统一转换为24小时制
     """
     if not time_str:
         return 19 * 60 + 30  # 默认19:30
     
-    # 优先匹配会议正式时间（19:30- 这种格式，在括号内）
-    match = re.search(r'（(\d{1,2}):(\d{2})', time_str)
+    # 尝试匹配带 AM/PM 的时间格式 (如 7:30pm, 7:30 PM, 7:30am)
+    match = re.search(r'(\d{1,2}):(\d{2})\s*(am|pm|AM|PM|a\.m\.|p\.m\.)', time_str, re.IGNORECASE)
+    if match:
+        hour = int(match.group(1))
+        minute = int(match.group(2))
+        period = match.group(3).lower()
+        
+        # 转换为24小时制
+        if 'pm' in period or 'p.m.' in period:
+            if hour != 12:  # 12pm 是中午12点，不需要加12
+                hour += 12
+        elif 'am' in period or 'a.m.' in period:
+            if hour == 12:  # 12am 是午夜0点
+                hour = 0
+        
+        return hour * 60 + minute
+    
+    # 匹配中文时间描述 (如 晚上7点半, 下午7点30分)
+    match = re.search(r'(?:晚上|下午|傍晚|晚间)(\d{1,2})[:点时](\d{0,2})', time_str)
+    if match:
+        hour = int(match.group(1))
+        minute_str = match.group(2)
+        minute = int(minute_str) if minute_str else 0
+        
+        # 晚上/下午通常是PM，转换为24小时制
+        if hour < 12:
+            hour += 12
+        
+        return hour * 60 + minute
+    
+    # 匹配上午时间 (如 上午9点, 早上10点)
+    match = re.search(r'(?:上午|早上|早晨)(\d{1,2})[:点时](\d{0,2})', time_str)
+    if match:
+        hour = int(match.group(1))
+        minute_str = match.group(2)
+        minute = int(minute_str) if minute_str else 0
+        
+        # 处理12am的情况
+        if hour == 12:
+            hour = 0
+        
+        return hour * 60 + minute
+    
+    # 优先匹配会议正式时间（19:30- 这种格式，在括号内 - 中文格式）
+    match = re.search(r'[（(](\d{1,2}):(\d{2})', time_str)
     if match:
         hour = int(match.group(1))
         minute = int(match.group(2))
         return hour * 60 + minute
     
-    # 备选：匹配 19:30- 这种格式
-    match = re.search(r'(\d{1,2}):(\d{2})\s*-', time_str)
+    # 备选：匹配 19:30- 这种格式（连字符后）
+    match = re.search(r'(\d{1,2}):(\d{2})\s*[-–—]', time_str)
     if match:
         hour = int(match.group(1))
         minute = int(match.group(2))
         return hour * 60 + minute
     
-    # 最后备选：签到时间（19:00签到）
-    match = re.search(r'(\d{1,2}):(\d{2})\s*签到', time_str)
+    # 再次备选：匹配括号外的时间 19:30
+    match = re.search(r'(\d{1,2}):(\d{2})', time_str)
     if match:
         hour = int(match.group(1))
         minute = int(match.group(2))
-        return hour * 60 + minute
+        # 只接受合理的小时范围 (7-23点)
+        if 7 <= hour <= 23:
+            return hour * 60 + minute
     
     return 19 * 60 + 30  # 默认19:30
 
+def format_time_24h(time_str):
+    """将时间字符串格式化为24小时制 HH:MM 格式"""
+    if not time_str:
+        return 'TBD'
+    
+    try:
+        total_minutes = parse_meeting_start_time(time_str)
+        hours = total_minutes // 60
+        minutes = total_minutes % 60
+        return f"{hours:02d}:{minutes:02d}"
+    except Exception:
+        return time_str
+
+# 注册为Jinja2全局函数
+app.jinja_env.globals['format_time_24h'] = format_time_24h
+
 DEFAULT_ROLES = [
-    '会议经理(MM)', '接待官(SAA)', '总主持(TOM)', '时间官(Timer)', 
-    '游戏官(Game Master)', '摄影师(Photographer)', '总点评(GE)',
-    'PS1 备稿演讲1', 'PS2 备稿演讲2', 'PS3 备稿演讲3', 'PS4 备稿演讲4',
-    'IE1 个评1', 'IE2 个评2', 'IE3 个评3', 'IE4 个评4',
-    '哼哈官(Ah-Counter)', '语法官(Grammarian)',
-    '即兴主持(TTM)', '即兴点评(TTE)',
-    '自由分享(Free Sharing)', '嘉宾分享(Guest Sharing)',
-    'President'
+    {'name_zh': '会议经理', 'name_en': 'Meeting Manager', 'abbrev': 'MM', 'member_only': True, 'desc_zh': '负责会议整体统筹和角色预订，确保会议顺利进行', 'desc_en': 'Responsible for overall meeting coordination and role booking'},
+    {'name_zh': '接待官', 'name_en': 'Sargeant-at-Arms', 'abbrev': 'SAA', 'member_only': False, 'desc_zh': '负责签到、开场致辞和嘉宾介绍', 'desc_en': 'Responsible for sign-in, opening remarks and guest introduction'},
+    {'name_zh': '总主持', 'name_en': 'Toastmaster', 'abbrev': 'TOM', 'member_only': True, 'desc_zh': '控制会议流程，引导各环节顺利衔接', 'desc_en': 'Controls meeting flow and guides transitions between segments'},
+    {'name_zh': '时间官', 'name_en': 'Timer', 'abbrev': 'Timer', 'member_only': False, 'desc_zh': '记录每位演讲者时间并做报告', 'desc_en': 'Tracks time for each speaker and reports'},
+    {'name_zh': '游戏官', 'name_en': 'Game Master', 'abbrev': 'GM', 'member_only': False, 'desc_zh': '设计互动游戏增加会议趣味性', 'desc_en': 'Designs interactive games for meeting fun'},
+    {'name_zh': '摄影师', 'name_en': 'Photographer', 'abbrev': 'Photo', 'member_only': False, 'desc_zh': '捕捉会议精彩瞬间留念', 'desc_en': 'Captures memorable meeting moments'},
+    {'name_zh': '总点评', 'name_en': 'General Evaluator', 'abbrev': 'GE', 'member_only': True, 'desc_zh': '整体点评所有演讲者和角色表现', 'desc_en': 'Evaluates all speakers and role holders overall'},
+    {'name_zh': '备稿演讲1', 'name_en': 'Prepared Speech 1', 'abbrev': 'PS1', 'member_only': True, 'desc_zh': '准备好的演讲（5-7分钟）', 'desc_en': 'Prepared speech (5-7 minutes)'},
+    {'name_zh': '备稿演讲2', 'name_en': 'Prepared Speech 2', 'abbrev': 'PS2', 'member_only': True, 'desc_zh': '准备好的演讲（5-7分钟）', 'desc_en': 'Prepared speech (5-7 minutes)'},
+    {'name_zh': '备稿演讲3', 'name_en': 'Prepared Speech 3', 'abbrev': 'PS3', 'member_only': True, 'desc_zh': '准备好的演讲（5-7分钟）', 'desc_en': 'Prepared speech (5-7 minutes)'},
+    {'name_zh': '备稿演讲4', 'name_en': 'Prepared Speech 4', 'abbrev': 'PS4', 'member_only': True, 'desc_zh': '准备好的演讲（5-7分钟）', 'desc_en': 'Prepared speech (5-7 minutes)'},
+    {'name_zh': '个评1', 'name_en': 'Individual Evaluator 1', 'abbrev': 'IE1', 'member_only': True, 'desc_zh': '点评备稿演讲1', 'desc_en': 'Evaluates Prepared Speech 1'},
+    {'name_zh': '个评2', 'name_en': 'Individual Evaluator 2', 'abbrev': 'IE2', 'member_only': True, 'desc_zh': '点评备稿演讲2', 'desc_en': 'Evaluates Prepared Speech 2'},
+    {'name_zh': '个评3', 'name_en': 'Individual Evaluator 3', 'abbrev': 'IE3', 'member_only': True, 'desc_zh': '点评备稿演讲3', 'desc_en': 'Evaluates Prepared Speech 3'},
+    {'name_zh': '个评4', 'name_en': 'Individual Evaluator 4', 'abbrev': 'IE4', 'member_only': True, 'desc_zh': '点评备稿演讲4', 'desc_en': 'Evaluates Prepared Speech 4'},
+    {'name_zh': '哼哈官', 'name_en': 'Ah-Counter', 'abbrev': 'Ah', 'member_only': False, 'desc_zh': '记录选手嗯哈次数帮助改进', 'desc_en': 'Counts fillers to help speakers improve'},
+    {'name_zh': '语法官', 'name_en': 'Grammarian', 'abbrev': 'Gram', 'member_only': False, 'desc_zh': '记录好词好句及语言错误', 'desc_en': 'Notes good words and language errors'},
+    {'name_zh': '即兴主持', 'name_en': 'Table Topics Master', 'abbrev': 'TTM', 'member_only': True, 'desc_zh': '邀请观众即兴演讲并抽取主题', 'desc_en': 'Invites table topics and selects themes'},
+    {'name_zh': '即兴点评', 'name_en': 'Table Topics Evaluator', 'abbrev': 'TTE', 'member_only': True, 'desc_zh': '点评即兴演讲者表现', 'desc_en': 'Evaluates table topics speakers'},
+    {'name_zh': '自由分享', 'name_en': 'Free Sharing', 'abbrev': 'Free', 'member_only': False, 'desc_zh': '开场自由分享环节', 'desc_en': 'Free sharing segment at opening'},
+    {'name_zh': '嘉宾分享', 'name_en': 'Guest Sharing', 'abbrev': 'Guest', 'member_only': False, 'desc_zh': '会议结尾邀请嘉宾分享', 'desc_en': 'Invites guests to share at closing'},
+    {'name_zh': '会长', 'name_en': 'President', 'abbrev': 'President', 'member_only': True, 'desc_zh': '俱乐部最高领导，负责闭幕和颁奖', 'desc_en': 'Club leader, closing and awards'},
 ]
+
+def get_role_display_name(role, lang='zh'):
+    """返回格式化的角色名: 中文名 (缩写) 或 Meeting Manager (MM)"""
+    for r in DEFAULT_ROLES:
+        if r['name_zh'] == role or r['abbrev'] == role:
+            return f"{r['name_zh']} ({r['abbrev']})"
+        if r['abbrev'] in role or r['name_zh'] in role:
+            return f"{r['name_zh']} ({r['abbrev']})"
+    
+    # 未找到匹配，返回原样
+    return role
+
+def get_role_display_name_lang(role, lang='zh'):
+    """根据语言返回格式化的角色名"""
+    for r in DEFAULT_ROLES:
+        if r['name_zh'] == role or r['abbrev'] == role:
+            if lang == 'en':
+                return f"{r['name_en']} ({r['abbrev']})"
+            return f"{r['name_zh']} ({r['abbrev']})"
+        if r['abbrev'] in role or r['name_zh'].replace('演讲','Speech').replace('个评','IE').replace('备稿','PS') in role or r['name_zh'] in role:
+            if lang == 'en':
+                return f"{r['name_en']} ({r['abbrev']})"
+            return f"{r['name_zh']} ({r['abbrev']})"
+    return role
+
+def get_role_description(role, lang='zh'):
+    """获取角色描述"""
+    for r in DEFAULT_ROLES:
+        if r['name_zh'] == role or r['abbrev'] == role:
+            if lang == 'en':
+                return r.get('desc_en', '')
+            return r.get('desc_zh', '')
+        if r['abbrev'] in role or r['name_zh'] in role:
+            if lang == 'en':
+                return r.get('desc_en', '')
+            return r.get('desc_zh', '')
+    return ''
+
+def is_member_only_role(role_name):
+    """检查角色是否仅限会员"""
+    for r in DEFAULT_ROLES:
+        if r['name_zh'] == role_name or r['abbrev'] == role_name:
+            return r.get('member_only', False)
+        if r['abbrev'] in role_name or r['name_zh'] in role_name:
+            return r.get('member_only', False)
+    return False
 
 PHASE_CONFIG = [
     {"key": "init", "name_zh": "签到与开场", "name_en": "Init", "color": "bg-info text-white"},
@@ -54,6 +193,7 @@ PHASE_CONFIG = [
     {"key": "speech", "name_zh": "备稿演讲", "name_en": "Prepared Speech", "color": "bg-success text-white"},
     {"key": "break", "name_zh": "中场休息", "name_en": "Break", "color": "bg-secondary text-white"},
     {"key": "evaluation", "name_zh": "点评环节", "name_en": "Evaluation", "color": "bg-primary text-white"},
+    {"key": "workshop", "name_zh": "工作坊", "name_en": "Workshop", "color": "bg-success text-white"},
     {"key": "closing", "name_zh": "闭幕总结", "name_en": "Closing", "color": "bg-dark text-white"},
 ]
 
@@ -87,11 +227,13 @@ PHASE_TEMPLATES = {
     "closing": [
         {"activity_zh": "TOM过渡到角色报告", "activity_en": "TOM's transition for facilitators report", "duration": 1, "role": "总主持(TOM)"},
         {"activity_zh": "时间官报告", "activity_en": "Timer report", "duration": 2, "role": "时间官(Timer)"},
+        {"activity_zh": "语法官报告", "activity_en": "Grammarian report", "duration": 2, "role": "语法官(Grammarian)"},
+        {"activity_zh": "哼哈官报告", "activity_en": "Ah-Counter report", "duration": 2, "role": "哼哈官(Ah-Counter)"},
         {"activity_zh": "最佳投票", "activity_en": "Vote for the Best", "duration": 1, "role": "总主持(TOM)"},
         {"activity_zh": "总点评报告", "activity_en": "General evaluator report", "duration": 7, "role": "总点评(GE)"},
-        {"activity_zh": "嘉宾分享", "activity_en": "Guest sharing", "duration": 3, "role": "嘉宾分享(Guest Sharing)"},
-        {"activity_zh": "颁奖环节", "activity_en": "Awarding time", "duration": 3, "role": "President"},
-        {"activity_zh": "闭幕词", "activity_en": "Closing remarks", "duration": 2, "role": "President"},
+        {"activity_zh": "嘉宾分享", "activity_en": "Guest sharing", "duration": 3, "role": "嘉宾分享(Guest Sharing)", "default_member": "Bass"},
+        {"activity_zh": "颁奖环节", "activity_en": "Awarding time", "duration": 3, "role": "President", "default_member": "Bass"},
+        {"activity_zh": "闭幕词", "activity_en": "Closing remarks", "duration": 2, "role": "President", "default_member": "Bass"},
         {"activity_zh": "角色预订", "activity_en": "Role booking", "duration": 1, "role": "会议经理(MM)"},
         {"activity_zh": "会议结束", "activity_en": "Meeting Adjourned", "duration": 0, "role": "-"},
     ]
@@ -100,15 +242,41 @@ PHASE_TEMPLATES = {
 def init_db():
     with sqlite3.connect(DB_PATH) as conn:
         cursor = conn.cursor()
+        
+        # 先创建表（如果不存在）
         cursor.execute("""CREATE TABLE IF NOT EXISTS meetings (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             meeting_id TEXT UNIQUE NOT NULL,
             theme TEXT NOT NULL,
+            english_theme TEXT,
             time TEXT NOT NULL,
+            time_en TEXT,
             address TEXT,
+            address_en TEXT,
             fee_info TEXT,
+            fee_info_en TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""")
+        
+        # 然后检查并添加新字段
+        cursor.execute("PRAGMA table_info(meetings)")
+        columns = [col[1] for col in cursor.fetchall()]
+        
+        # 添加英文字段
+        new_fields = [
+            ('english_theme', 'TEXT'),
+            ('time_en', 'TEXT'),
+            ('address_en', 'TEXT'),
+            ('fee_info_en', 'TEXT'),
+            ('workshop_zh', 'TEXT'),
+            ('workshop_en', 'TEXT'),
+            ('workshop_duration', 'INTEGER DEFAULT 30'),
+            ('workshop_speaker', 'TEXT'),
+        ]
+        for field, dtype in new_fields:
+            if field not in columns:
+                cursor.execute(f"ALTER TABLE meetings ADD COLUMN {field} {dtype}")
+        
         cursor.execute("""CREATE TABLE IF NOT EXISTS roles (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL,
@@ -137,7 +305,7 @@ def init_db():
         )""")
         for role in DEFAULT_ROLES:
             try:
-                cursor.execute("INSERT INTO roles (name) VALUES (?)", (role,))
+                cursor.execute("INSERT INTO roles (name) VALUES (?)", (role['name_zh'],))
             except sqlite3.IntegrityError:
                 pass
         conn.commit()
@@ -159,26 +327,407 @@ def index():
     conn.close()
     return render_template('index.html', meetings=meetings)
 
+@app.route('/help')
+def help():
+    """帮助页面"""
+    return render_template('help.html')
+
+@app.route('/create-from-post', methods=['GET', 'POST'])
+def create_meeting_from_post():
+    """Create meeting from WeChat group sign-up post"""
+    if request.method == 'POST':
+        post_text = request.form.get('post_text', '')
+        
+        if not post_text.strip():
+            flash('请输入接龙帖子内容！', 'warning')
+        else:
+            # Parse meeting info and registrations from the post
+            meeting_info, registrations = parse_meeting_from_post(post_text)
+            
+            if not meeting_info.get('meeting_id'):
+                flash('未能解析出会议编号，请检查帖子格式！', 'warning')
+            else:
+                conn = get_db_connection()
+                try:
+                    # Check if meeting already exists
+                    existing = conn.execute('SELECT id FROM meetings WHERE meeting_id = ?', 
+                                          (meeting_info['meeting_id'],)).fetchone()
+                    if existing:
+                        flash(f'会议 {meeting_info["meeting_id"]} 已存在！', 'danger')
+                        return redirect(url_for('meeting_detail', meeting_db_id=existing['id']))
+                    
+                    # Insert meeting
+                    conn.execute("""
+                        INSERT INTO meetings (meeting_id, theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        meeting_info['meeting_id'],
+                        meeting_info.get('theme', ''),
+                        meeting_info.get('english_theme', ''),
+                        meeting_info.get('time', ''),
+                        meeting_info.get('time_en', ''),
+                        meeting_info.get('address', ''),
+                        meeting_info.get('address_en', ''),
+                        meeting_info.get('fee_info', ''),
+                        meeting_info.get('fee_info_en', ''),
+                    ))
+                    meeting_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
+                    
+                    # Populate meeting_roles table with all default roles
+                    for role in DEFAULT_ROLES:
+                        try:
+                            conn.execute(
+                                "INSERT INTO meeting_roles (meeting_id, role_name) VALUES (?, ?)",
+                                (meeting_id, role['name_zh'])
+                            )
+                        except sqlite3.IntegrityError:
+                            pass
+                    
+                    # Insert registrations
+                    imported_count = 0
+                    for role_name, member_name in registrations:
+                        try:
+                            # Add member if not exists
+                            existing_member = conn.execute('SELECT * FROM members WHERE name = ?', 
+                                                         (member_name,)).fetchone()
+                            if not existing_member:
+                                conn.execute("INSERT INTO members (name, is_member) VALUES (?, ?)", 
+                                           (member_name, 0))  # Default to guest
+                            
+                            # Add registration
+                            conn.execute(
+                                "INSERT INTO registrations (meeting_id, role_name, member_name) VALUES (?, ?, ?)",
+                                (meeting_id, role_name, member_name)
+                            )
+                            imported_count += 1
+                        except sqlite3.IntegrityError:
+                            pass
+                    
+                    conn.commit()
+                    flash(f'会议创建成功！导入 {imported_count} 条报名记录。', 'success')
+                    return redirect(url_for('meeting_detail', meeting_db_id=meeting_id))
+                    
+                except Exception as e:
+                    conn.rollback()
+                    flash(f'创建会议失败：{str(e)}', 'danger')
+                finally:
+                    conn.close()
+    
+    return render_template('create_from_post.html')
+
+
+def parse_meeting_from_post(text):
+    """
+    Parse WeChat group post and extract meeting info and registrations.
+    Returns: (meeting_info_dict, [(role_name, member_name), ...])
+    """
+    meeting_info = {}
+    registrations = []
+    lines = text.strip().split('\n')
+    
+    # Role mapping (same as parse_wechat_signup)
+    role_mapping = {
+        'mm': '会议经理',
+        'master of ceremonies': '会议经理',
+        '主持人': '会议经理',
+        'saa': '接待官',
+        'sergeant at arms': '接待官',
+        '迎宾官': '接待官',
+        'opening remark': '开场致辞',
+        '开场词': '开场致辞',
+        'tom': '总主持',
+        'table topics master': '总主持',
+        '即兴主持': '总主持',
+        'timer': '时间官',
+        '计时官': '时间官',
+        'game master': '游戏官',
+        '游戏官': '游戏官',
+        'photographer': '摄影师',
+        '摄影师': '摄影师',
+        'ah-counter': '哼哈官',
+        'ah counter': '哼哈官',
+        '哼哈官': '哼哈官',
+        'grammarian': '语法官',
+        '语法官': '语法官',
+        'ge': '总点评',
+        'general evaluator': '总点评',
+        '总点评': '总点评',
+        'ttm': '即兴主持',
+        'table topics master': '即兴主持',
+        'tte': '即兴点评',
+        'table topics evaluator': '即兴点评',
+        '即兴点评': '即兴点评',
+        'speaker 1': '备稿演讲1',
+        'ps1': '备稿演讲1',
+        '备稿演讲1': '备稿演讲1',
+        'speaker 2': '备稿演讲2',
+        'ps2': '备稿演讲2',
+        '备稿演讲2': '备稿演讲2',
+        'speaker 3': '备稿演讲3',
+        'ps3': '备稿演讲3',
+        '备稿演讲3': '备稿演讲3',
+        'speaker 4': '备稿演讲4',
+        'ps4': '备稿演讲4',
+        '备稿演讲4': '备稿演讲4',
+        'ie 1': '个评1',
+        '个评1': '个评1',
+        'ie 2': '个评2',
+        '个评2': '个评2',
+        'ie 3': '个评3',
+        '个评3': '个评3',
+        'ie 4': '个评4',
+        '个评4': '个评4',
+        'president': '会长',
+        '会长': '会长',
+    }
+    
+    import re
+    
+    # Parse meeting metadata
+    # Meeting number: GEM# 767 Meeting
+    match = re.search(r'(?:GEM|GEM#)\s*(\d+)', text, re.IGNORECASE)
+    if match:
+        meeting_info['meeting_id'] = match.group(1)
+    
+    # Date: (Monday, 30 Mar. 2026)
+    match = re.search(r'\((\w+,\s+\d+\s+\w+\.\s+\d{4})\)', text)
+    if match:
+        meeting_info['english_theme'] = match.group(1)
+    
+    # Time: 🕤Time: 19:20 - 21:20
+    match = re.search(r'(?:Time|时间)[:：]\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})', text)
+    if match:
+        meeting_info['time'] = match.group(1)
+        meeting_info['time_en'] = match.group(1)
+    
+    # Address
+    match = re.search(r'(?:地址|Venue|Address)[:：]\s*(.+)', text)
+    if match:
+        address = match.group(1).strip()
+        meeting_info['address'] = address
+        meeting_info['address_en'] = address
+    
+    # Fee info
+    match = re.search(r'(?:非会员需分摊场地费|Fee)[:：]\s*(.+)', text)
+    if match:
+        fee = match.group(1).strip()
+        meeting_info['fee_info'] = f'非会员需分摊场地费：{fee}'
+        meeting_info['fee_info_en'] = f'Fee: {fee}'
+    
+    # Parse registrations
+    role_pattern = re.compile(r'^([^:：]+)[:：]\s*(.+)$')
+    
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#') or line.startswith('欢迎') or line.startswith('Welcome'):
+            continue
+        
+        # Skip numbered list at the end
+        if re.match(r'^\d+\.\s+\S+$', line):
+            continue
+        
+        # Match "Role: Name" pattern
+        match = role_pattern.match(line)
+        if match:
+            role_key = match.group(1).strip().lower()
+            members_str = match.group(2).strip()
+            
+            if not members_str or members_str.lower() in ['tbd', '']:
+                continue
+            
+            standard_role = role_mapping.get(role_key)
+            if not standard_role:
+                for key, value in role_mapping.items():
+                    if key in role_key or role_key in key:
+                        standard_role = value
+                        break
+            
+            if standard_role:
+                members = [m.strip() for m in members_str.split('/') if m.strip()]
+                for member in members:
+                    registrations.append((standard_role, member))
+    
+    return meeting_info, registrations
+
+def parse_wechat_signup(text):
+    """
+    Parse WeChat group sign-up post and extract registrations.
+    Supports multiple post formats.
+    Returns: list of (role_name, member_name) tuples
+    """
+    registrations = []
+    lines = text.strip().split('\n')
+    
+    # Role mapping from Chinese/abbreviated/English to standard DB role names (name_zh from DEFAULT_ROLES)
+    role_mapping = {
+        # MM
+        'mm': '会议经理',
+        'master of ceremonies': '会议经理',
+        '主持人': '会议经理',
+        'meeting manager': '会议经理',
+        
+        # SAA
+        'saa': '接待官',
+        'sergeant at arms': '接待官',
+        'sargeant-at-arms': '接待官',
+        '迎宾官': '接待官',
+        'receptionist': '接待官',
+        
+        # TOM
+        'tom': '总主持',
+        'toastmaster': '总主持',
+        'table topics master': '总主持', # Sometimes TTM is confused or used broadly, but usually TTM is specific
+        '即兴主持': '总主持', # In some contexts people might mix them up, but let's stick to standard mapping below for TTM
+        
+        # Timer
+        'timer': '时间官',
+        '计时官': '时间官',
+        
+        # GM
+        'gm': '游戏官',
+        'game master': '游戏官',
+        '游戏官': '游戏官',
+        
+        # Photographer
+        'photographer': '摄影师',
+        'photo': '摄影师',
+        '摄影师': '摄影师',
+        
+        # Ah-Counter
+        'ah-counter': '哼哈官',
+        'ah counter': '哼哈官',
+        'ah': '哼哈官',
+        '哼哈官': '哼哈官',
+        
+        # Grammarian
+        'grammarian': '语法官',
+        'gram': '语法官',
+        '语法官': '语法官',
+        
+        # GE
+        'ge': '总点评',
+        'general evaluator': '总点评',
+        '总点评': '总点评',
+        
+        # TTM
+        'ttm': '即兴主持',
+        'table topics master': '即兴主持',
+        '即兴主持': '即兴主持',
+        
+        # TTE
+        'tte': '即兴点评',
+        'table topics evaluator': '即兴点评',
+        '即兴点评': '即兴点评',
+        
+        # Prepared Speeches
+        'speaker 1': '备稿演讲1',
+        'ps1': '备稿演讲1',
+        '备稿演讲1': '备稿演讲1',
+        'speaker 2': '备稿演讲2',
+        'ps2': '备稿演讲2',
+        '备稿演讲2': '备稿演讲2',
+        'speaker 3': '备稿演讲3',
+        'ps3': '备稿演讲3',
+        '备稿演讲3': '备稿演讲3',
+        'speaker 4': '备稿演讲4',
+        'ps4': '备稿演讲4',
+        '备稿演讲4': '备稿演讲4',
+        
+        # Individual Evaluations
+        'ie 1': '个评1',
+        '个评1': '个评1',
+        'ie 2': '个评2',
+        '个评2': '个评2',
+        'ie 3': '个评3',
+        '个评3': '个评3',
+        'ie 4': '个评4',
+        '个评4': '个评4',
+        
+        # Others
+        'president': '会长',
+        '会长': '会长',
+        'free sharing': '自由分享',
+        '自由分享': '自由分享',
+        'guest sharing': '嘉宾分享',
+        '嘉宾分享': '嘉宾分享',
+    }
+    
+    # Pattern 1: Role: Name format (e.g., "MM: Guiling/Sibley")
+    import re
+    role_pattern = re.compile(r'^([^:：]+)[:：]\s*(.+)$')
+    
+    for line in lines:
+        line = line.strip()
+        # Remove leading numbers/bullets often found in copy-pasted lists (e.g., "1. MM: Name" or "1 MM: Name")
+        cleaned_line = re.sub(r'^\d+[\.\)\-]?\s*', '', line)
+        
+        if not cleaned_line or cleaned_line.startswith('#') or cleaned_line.startswith('欢迎') or cleaned_line.startswith('Welcome'):
+            continue
+        
+        # Match "Role: Name" pattern
+        match = role_pattern.match(cleaned_line)
+        if match:
+            role_key = match.group(1).strip().lower()
+            members_str = match.group(2).strip()
+            
+            # Skip if no members or empty
+            if not members_str or members_str.lower() in ['tbd', '']:
+                continue
+            
+            # Map role key to standard role name
+            standard_role = role_mapping.get(role_key)
+            
+            if not standard_role:
+                # Try to find partial match if exact match fails
+                for key, value in role_mapping.items():
+                    if key in role_key or role_key in key:
+                        standard_role = value
+                        break
+            
+            if standard_role:
+                # Handle multiple members separated by /
+                members = [m.strip() for m in members_str.split('/') if m.strip()]
+                for member in members:
+                    registrations.append((standard_role, member))
+    
+    return registrations
+
 @app.route('/meeting/create', methods=['GET', 'POST'])
 def create_meeting():
     if request.method == 'POST':
         meeting_id = request.form['meeting_id']
         theme = request.form['theme']
+        english_theme = request.form.get('english_theme', '')
         time = request.form['time']
+        time_en = request.form.get('time_en', '')
         address = request.form.get('address', '')
+        address_en = request.form.get('address_en', '')
         fee_info = request.form.get('fee_info', '')
+        fee_info_en = request.form.get('fee_info_en', '')
+        workshop_enabled = request.form.get('workshop_enabled') == 'on'
+        workshop_speaker = request.form.get('workshop_speaker', '')
+        workshop_zh = request.form.get('workshop_zh', '')
+        workshop_en = request.form.get('workshop_en', '')
+        workshop_duration = request.form.get('workshop_duration', '30')
+        
+        # If workshop is not enabled, clear the workshop fields
+        if not workshop_enabled:
+            workshop_speaker = ''
+            workshop_zh = ''
+            workshop_en = ''
+            workshop_duration = '30'
         
         conn = get_db_connection()
         try:
             conn.execute(
-                "INSERT INTO meetings (meeting_id, theme, time, address, fee_info) VALUES (?, ?, ?, ?, ?)",
-                (meeting_id, theme, time, address, fee_info)
+                "INSERT INTO meetings (meeting_id, theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en, workshop_speaker, workshop_zh, workshop_en, workshop_duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (meeting_id, theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en, workshop_speaker, workshop_zh, workshop_en, workshop_duration)
             )
             meeting_db_id = conn.execute('SELECT id FROM meetings WHERE meeting_id = ?', (meeting_id,)).fetchone()['id']
             for role in DEFAULT_ROLES:
                 conn.execute(
                     "INSERT INTO meeting_roles (meeting_id, role_name) VALUES (?, ?)",
-                    (meeting_db_id, role)
+                    (meeting_db_id, role['name_zh'])
                 )
             conn.commit()
             flash('会议创建成功！', 'success')
@@ -200,14 +749,30 @@ def edit_meeting(meeting_db_id):
     
     if request.method == 'POST':
         theme = request.form['theme']
+        english_theme = request.form.get('english_theme', '')
         time = request.form['time']
+        time_en = request.form.get('time_en', '')
         address = request.form.get('address', '')
+        address_en = request.form.get('address_en', '')
         fee_info = request.form.get('fee_info', '')
+        fee_info_en = request.form.get('fee_info_en', '')
+        workshop_enabled = request.form.get('workshop_enabled') == 'on'
+        workshop_speaker = request.form.get('workshop_speaker', '')
+        workshop_zh = request.form.get('workshop_zh', '')
+        workshop_en = request.form.get('workshop_en', '')
+        workshop_duration = request.form.get('workshop_duration', '30')
+        
+        # If workshop is not enabled, clear the workshop fields
+        if not workshop_enabled:
+            workshop_speaker = ''
+            workshop_zh = ''
+            workshop_en = ''
+            workshop_duration = '30'
         
         conn.execute("""
-            UPDATE meetings SET theme = ?, time = ?, address = ?, fee_info = ?
+            UPDATE meetings SET theme = ?, english_theme = ?, time = ?, time_en = ?, address = ?, address_en = ?, fee_info = ?, fee_info_en = ?, workshop_speaker = ?, workshop_zh = ?, workshop_en = ?, workshop_duration = ?
             WHERE id = ?
-        """, (theme, time, address, fee_info, meeting_db_id))
+        """, (theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en, workshop_speaker, workshop_zh, workshop_en, workshop_duration, meeting_db_id))
         conn.commit()
         flash('会议信息已更新！', 'success')
         conn.close()
@@ -331,6 +896,8 @@ def meeting_detail(meeting_db_id):
         flash('会议不存在！', 'danger')
         return redirect(url_for('index'))
     
+    lang = session.get('lang', 'zh')
+    
     roles = conn.execute("""SELECT mr.role_name, r.description, reg.member_name, m.is_member
         FROM meeting_roles mr
         LEFT JOIN registrations reg ON mr.meeting_id = reg.meeting_id AND mr.role_name = reg.role_name
@@ -339,6 +906,22 @@ def meeting_detail(meeting_db_id):
         WHERE mr.meeting_id = ?
     """, (meeting_db_id,)).fetchall()
     
+    # 获取格式化的角色名、描述和是否会员专属
+    roles_with_info = []
+    for role in roles:
+        role_name = role['role_name']
+        display_name = get_role_display_name_lang(role_name, lang)
+        role_desc = get_role_description(role_name, lang)
+        member_only = is_member_only_role(role_name)
+        roles_with_info.append({
+            'role_name': role_name,
+            'display_name': display_name,
+            'description': role_desc,
+            'member_name': role['member_name'],
+            'is_member': role['is_member'],
+            'member_only': member_only
+        })
+    
     registered_members = conn.execute("""SELECT reg.member_name, m.is_member, GROUP_CONCAT(reg.role_name) as roles
         FROM registrations reg
         LEFT JOIN members m ON reg.member_name = m.name
@@ -346,12 +929,24 @@ def meeting_detail(meeting_db_id):
         GROUP BY reg.member_name
     """, (meeting_db_id,)).fetchall()
     
+    # 格式化注册人员的角色显示
+    formatted_members = []
+    for member in registered_members:
+        roles_list = member['roles'].split(',') if member['roles'] else []
+        formatted_roles = ', '.join([get_role_display_name_lang(r, lang) for r in roles_list])
+        formatted_members.append({
+            'member_name': member['member_name'],
+            'is_member': member['is_member'],
+            'roles': formatted_roles
+        })
+    
     conn.close()
-    return render_template('meeting_detail.html', meeting=meeting, roles=roles, registered_members=registered_members)
+    return render_template('meeting_detail.html', meeting=meeting, roles=roles_with_info, registered_members=formatted_members)
 
 @app.route('/meeting/<int:meeting_db_id>/agenda')
 def generate_agenda(meeting_db_id):
-    lang = request.args.get('lang', 'both')
+    # 优先使用 Session 中的语言设置，URL 参数可选覆盖
+    lang = request.args.get('lang', session.get('lang', 'zh'))
     
     conn = get_db_connection()
     meeting = conn.execute('SELECT * FROM meetings WHERE id = ?', (meeting_db_id,)).fetchone()
@@ -362,16 +957,64 @@ def generate_agenda(meeting_db_id):
     regs = conn.execute('SELECT role_name, member_name FROM registrations WHERE meeting_id = ?', (meeting_db_id,)).fetchall()
     reg_dict = {r['role_name']: r['member_name'] for r in regs}
     
-    # 从会议信息中提取开始时间
-    current_min = parse_meeting_start_time(meeting['time'])
+    # 从会议信息中提取开始时间 - 优先使用当前语言的版本
+    if lang == 'en' and meeting['time_en']:
+        current_min = parse_meeting_start_time(meeting['time_en'])
+    elif lang == 'both' and meeting['time_en']:
+        # 中英模式：尝试解析英文时间，如果失败则用中文时间
+        current_min = parse_meeting_start_time(meeting['time_en'])
+        if current_min == 19 * 60 + 30:  # 如果解析失败（返回默认值）
+            current_min = parse_meeting_start_time(meeting['time'])
+    else:
+        current_min = parse_meeting_start_time(meeting['time'])
+    
     agenda = []
+    
+    # 获取工作坊信息
+    workshop_speaker = meeting['workshop_speaker'] if meeting['workshop_speaker'] else None
+    workshop_zh = meeting['workshop_zh'] if meeting['workshop_zh'] else None
+    workshop_en = meeting['workshop_en'] if meeting['workshop_en'] else None
+    workshop_duration = int(meeting['workshop_duration']) if meeting['workshop_duration'] else 30
     
     for phase in PHASE_CONFIG:
         phase_key = phase['key']
         templates = PHASE_TEMPLATES.get(phase_key, [])
         
+        # 在evaluation之后、closing之前插入workshop阶段
+        if phase_key == 'workshop':
+            # Show workshop only if speaker is filled (workshop enabled)
+            if workshop_speaker:
+                # 添加工作坊活动
+                if lang == 'en' and workshop_en:
+                    workshop_activity = workshop_en
+                elif lang == 'zh':
+                    workshop_activity = workshop_zh if workshop_zh else ''
+                else:  # both
+                    workshop_activity = f"{workshop_en if workshop_en else ''} {workshop_zh if workshop_zh else ''}"
+                
+                # Add speaker name to the activity
+                if workshop_activity:
+                    workshop_activity += f" ({workshop_speaker})"
+                else:
+                    workshop_activity = f"Workshop ({workshop_speaker})"
+                
+                agenda.append({
+                    "time": f"{current_min//60:02d}:{current_min%60:02d}",
+                    "phase": "workshop",
+                    "activity": workshop_activity,
+                    "duration": workshop_duration,
+                    "role": workshop_speaker
+                })
+                current_min += workshop_duration
+            continue  # 跳过workshop阶段，因为它不是从模板生成的
+        
         for tpl in templates:
             member = get_role_member(reg_dict, tpl['role'])
+            
+            # 处理默认成员逻辑（嘉宾分享、颁奖环节、闭幕词默认为Bass）
+            if not member and tpl.get('default_member'):
+                member = tpl['default_member']
+            
             if lang == 'en':
                 activity = tpl['activity_en']
             elif lang == 'zh':
@@ -396,12 +1039,16 @@ def generate_agenda(meeting_db_id):
         # Speech: dynamic PS entries
         if phase_key == 'speech':
             for i in range(1, 5):
-                ps_role = f'PS{i} 备稿演讲{i}'
-                ie_role = f'IE{i} 个评{i}'
-                if ps_role in reg_dict:
-                    member = reg_dict[ps_role]
+                # Use the exact name_zh from DEFAULT_ROLES for lookup as stored in DB
+                ps_role_key = f'备稿演讲{i}'
+                ie_role_key = f'个评{i}'
+                
+                if ps_role_key in reg_dict:
+                    member = reg_dict[ps_role_key]
                     # TOM brief introduction
-                    tom_member = get_role_member(reg_dict, '总主持(TOM)')
+                    # Note: '总主持(TOM)' might also need to be just '总主持' depending on DB storage
+                    # Looking at create_meeting, it uses role['name_zh'] which is '总主持'
+                    tom_member = get_role_member(reg_dict, '总主持')
                     if lang == 'en':
                         intro = f"Brief introduction ({tom_member or 'TOM'})"
                     elif lang == 'zh':
@@ -439,18 +1086,28 @@ def generate_agenda(meeting_db_id):
         # Evaluation: dynamic IE entries
         if phase_key == 'evaluation':
             for i in range(1, 5):
-                ie_role = f'IE{i} 个评{i}'
-                ps_role = f'PS{i} 备稿演讲{i}'
-                if ie_role in reg_dict:
-                    ie_member = reg_dict[ie_role]
-                    ps_member = reg_dict.get(ps_role, f'Speech {i}')
-                    
+                # Use the exact name_zh from DEFAULT_ROLES for lookup as stored in DB
+                ie_role_key = f'个评{i}'
+                ie_role_alt = f'IE{i}'
+                ps_role_key = f'备稿演讲{i}'
+                ps_role_alt = f'PS{i}'
+                
+                # Find matching IE role in reg_dict
+                ie_member = None
+                ps_member = None
+                for role_name, member in reg_dict.items():
+                    if f'个评{i}' in role_name or f'IE{i}' in role_name:
+                        ie_member = member
+                    if f'备稿演讲{i}' in role_name or f'PS{i}' in role_name:
+                        ps_member = member
+                
+                if ie_member:
                     if lang == 'en':
-                        act = f"IE{i} Evaluation for {ps_member} ({ie_member})"
+                        act = f"IE{i} Evaluation for {ps_member or 'Speech '+str(i)} ({ie_member})"
                     elif lang == 'zh':
-                        act = f"IE{i} 点评{ps_member}（{ie_member}）"
+                        act = f"IE{i} 点评{ps_member or '演讲'+str(i)}（{ie_member}）"
                     else:
-                        act = f"IE{i} Evaluation 点评{ps_member}（{ie_member}）"
+                        act = f"IE{i} Evaluation 点评{ps_member or '演讲'+str(i)}（{ie_member}）"
                     
                     agenda.append({
                         "time": f"{current_min//60:02d}:{current_min%60:02d}",
@@ -470,6 +1127,11 @@ def register():
     role_name = request.form['role_name']
     member_name = request.form['member_name']
     is_member = request.form.get('is_member', '0') == '1'
+    
+    # 检查是否会员专属角色
+    if is_member_only_role(role_name) and not is_member:
+        flash(f'角色 {role_name} 仅限会员报名，请勾选"会员"后重新提交！', 'danger')
+        return redirect(url_for('meeting_detail', meeting_db_id=meeting_db_id))
     
     conn = get_db_connection()
     try:

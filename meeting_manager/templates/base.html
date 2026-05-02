@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}头马会议角色管理系统{% endblock %}</title>
+    {% set lang = session.get('lang', 'zh') %}
+    <title>{% block title %}Foshan English Talks Toastmasters International Role Management{% endblock %}</title>
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap Icons -->
@@ -48,7 +49,7 @@
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">
-                <i class="bi bi-calendar-event me-2"></i>头马会议角色管理
+                <i class="bi bi-calendar-event me-2"></i>{% if lang == 'en' %}Foshan English Talks Toastmasters International Role Management{% elif lang == 'both' %}佛山英语说头马演讲国际角色管理 Foshan English Talks Toastmasters{% else %}佛山英语说头马演讲国际角色管理{% endif %}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -57,13 +58,30 @@
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('index') }}">
-                            <i class="bi bi-house-door me-1"></i>首页
+                            <i class="bi bi-house-door me-1"></i>{% if lang == 'en' %}Home{% elif lang == 'both' %}首页 Home{% else %}首页{% endif %}
                         </a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('create_meeting') }}">
-                            <i class="bi bi-plus-circle me-1"></i>创建会议
+                            <i class="bi bi-plus-circle me-1"></i>{% if lang == 'en' %}Create Meeting{% elif lang == 'both' %}创建会议 Create Meeting{% else %}创建会议{% endif %}
                         </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('create_meeting_from_post') }}">
+                            <i class="bi bi-file-earmark-text me-1"></i>{% if lang == 'en' %}Create from Post{% elif lang == 'both' %}从帖子创建 Create from Post{% else %}从帖子创建{% endif %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('help') }}">
+                            <i class="bi bi-question-circle me-1"></i>{% if lang == 'en' %}Help{% elif lang == 'both' %}帮助 Help{% else %}帮助{% endif %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <div class="btn-group btn-group-sm ms-2" role="group">
+                            <a href="{{ url_for('set_language', lang='zh') }}" class="btn btn-outline-secondary {% if session.get('lang') == 'zh' or not session.get('lang') %}active{% endif %}">中文</a>
+                            <a href="{{ url_for('set_language', lang='en') }}" class="btn btn-outline-secondary {% if session.get('lang') == 'en' %}active{% endif %}">English</a>
+                            <a href="{{ url_for('set_language', lang='both') }}" class="btn btn-outline-secondary {% if session.get('lang') == 'both' %}active{% endif %}">中英</a>
+                        </div>
                     </li>
                 </ul>
             </div>

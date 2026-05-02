@@ -1,0 +1,512 @@
+{% extends "base.html" %}
+
+{% block title %}{{ '帮助中心' if lang != 'en' else 'Help Center' }} - Meeting Manager{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- 页面标题 -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="mb-3">
+                <i class="bi bi-question-circle-fill text-primary me-2"></i>
+                {% if lang == 'en' %}
+                    Help Center
+                {% elif lang == 'both' %}
+                    帮助中心 Help Center
+                {% else %}
+                    帮助中心
+                {% endif %}
+            </h1>
+            <p class="text-muted">
+                {% if lang == 'en' %}
+                    Find answers to common questions and learn how to use the system
+                {% elif lang == 'both' %}
+                    查找常见问题的答案，学习如何使用系统
+                    <br>Find answers to common questions and learn how to use the system
+                {% else %}
+                    查找常见问题的答案，学习如何使用系统
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- 智能搜索框 -->
+    <div class="row mb-5">
+        <div class="col-md-8 offset-md-2">
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">
+                        <i class="bi bi-search me-2"></i>
+                        {% if lang == 'en' %}
+                            Search for help
+                        {% elif lang == 'both' %}
+                            搜索帮助 Search for help
+                        {% else %}
+                            搜索帮助
+                        {% endif %}
+                    </h5>
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text">
+                            <i class="bi bi-chat-question"></i>
+                        </span>
+                        <input type="text" 
+                               class="form-control" 
+                               id="faqSearchInput" 
+                               placeholder="{% if lang == 'en' %}Type your question here...{% elif lang == 'both' %}输入您的问题... / Type your question...{% else %}输入您的问题...{% endif %}"
+                               autocomplete="off">
+                        <button class="btn btn-primary" type="button" id="searchBtn">
+                            <i class="bi bi-search"></i>
+                            {% if lang != 'en' %}搜索{% else %}Search{% endif %}
+                        </button>
+                    </div>
+                    
+                    <!-- 常见问题建议 -->
+                    <div class="mt-3" id="suggestionsContainer">
+                        <small class="text-muted">
+                            {% if lang == 'en' %}
+                                Try asking:
+                            {% elif lang == 'both' %}
+                                试试问：
+                            {% else %}
+                                试试问：
+                            {% endif %}
+                        </small>
+                        <div id="suggestionsList" class="mt-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 搜索结果 -->
+    <div class="row mb-4" id="searchResults" style="display: none;">
+        <div class="col-12">
+            <div class="alert alert-info">
+                <h5><i class="bi bi-lightbulb me-2"></i>{% if lang == 'en' %}Search Results{% elif lang == 'both' %}搜索结果 Search Results{% else %}搜索结果{% endif %}</h5>
+                <div id="resultsContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAQ 分类浏览 -->
+    <div class="row">
+        <div class="col-12">
+            <h3 class="mb-4">
+                <i class="bi bi-grid-3x3-gap me-2"></i>
+                {% if lang == 'en' %}
+                    Browse by Category
+                {% elif lang == 'both' %}
+                    按分类浏览 Browse by Category
+                {% else %}
+                    按分类浏览
+                {% endif %}
+            </h3>
+        </div>
+    </div>
+
+    <div class="row g-4" id="faqCategories">
+        <!-- 快速开始 -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm hover-shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-rocket-takeoff me-2"></i>
+                        {% if lang == 'en' %}Getting Started{% elif lang == 'both' %}快速开始 Getting Started{% else %}快速开始{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="如何开始使用">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}How do I get started?{% elif lang == 'both' %}如何开始使用{% else %}如何开始使用{% endif %}
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="有哪些功能">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}What features are available?{% elif lang == 'both' %}有哪些功能{% else %}有哪些功能{% endif %}
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 会议管理 -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm hover-shadow">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-calendar-event me-2"></i>
+                        {% if lang == 'en' %}Meeting Management{% elif lang == 'both' %}会议管理 Meeting Management{% else %}会议管理{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="如何创建会议">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}How to create a meeting?{% elif lang == 'both' %}如何创建会议{% else %}如何创建会议{% endif %}
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="如何编辑会议">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}How to edit a meeting?{% elif lang == 'both' %}如何编辑会议{% else %}如何编辑会议{% endif %}
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="如何查看议程">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}How to view agenda?{% elif lang == 'both' %}如何查看议程{% else %}如何查看议程{% endif %}
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 语言设置 -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm hover-shadow">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-translate me-2"></i>
+                        {% if lang == 'en' %}Language Settings{% elif lang == 'both' %}语言设置 Language Settings{% else %}语言设置{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="如何切换语言">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}How to switch language?{% elif lang == 'both' %}如何切换语言{% else %}如何切换语言{% endif %}
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="时间格式">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}Why 24-hour time format?{% elif lang == 'both' %}为什么是24小时制{% else %}为什么是24小时制{% endif %}
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 角色管理 -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm hover-shadow">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people me-2"></i>
+                        {% if lang == 'en' %}Role Management{% elif lang == 'both' %}角色管理 Role Management{% else %}角色管理{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="如何分配角色">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}How to assign roles?{% elif lang == 'both' %}如何分配角色{% else %}如何分配角色{% endif %}
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- 问题排查 -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm hover-shadow">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-wrench-adjustable me-2"></i>
+                        {% if lang == 'en' %}Troubleshooting{% elif lang == 'both' %}问题排查 Troubleshooting{% else %}问题排查{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="遇到问题怎么办">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}What if I encounter problems?{% elif lang == 'both' %}遇到问题怎么办{% else %}遇到问题怎么办{% endif %}
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="数据备份">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}How to backup data?{% elif lang == 'both' %}如何备份数据{% else %}如何备份数据{% endif %}
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Beta 版本 -->
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 shadow-sm hover-shadow">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-flask me-2"></i>
+                        {% if lang == 'en' %}Beta Version{% elif lang == 'both' %}Beta 版本 Beta Version{% else %}Beta 版本{% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="如何报告问题">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}How to report issues?{% elif lang == 'both' %}如何报告问题{% else %}如何报告问题{% endif %}
+                            </a>
+                        </li>
+                        <li class="mb-2">
+                            <a href="#" class="faq-link" data-question="如何获取更新">
+                                <i class="bi bi-chevron-right me-1"></i>
+                                {% if lang == 'en' %}How to get updates?{% elif lang == 'both' %}如何获取更新{% else %}如何获取更新{% endif %}
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 联系支持 -->
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h4 class="text-center mb-4">
+                        <i class="bi bi-headset me-2"></i>
+                        {% if lang == 'en' %}Still need help?{% elif lang == 'both' %}还需要帮助？ Still need help?{% else %}还需要帮助？{% endif %}
+                    </h4>
+                    
+                    <!-- WeChat Contact Section -->
+                    <div class="row justify-content-center mb-4">
+                        <div class="col-md-8 col-lg-6">
+                            <div class="card border-success">
+                                <div class="card-header bg-success text-white text-center">
+                                    <h5 class="mb-0">
+                                        <i class="bi bi-wechat me-2"></i>
+                                        {% if lang == 'en' %}WeChat Contact{% elif lang == 'both' %}微信联系 WeChat Contact{% else %}微信联系{% endif %}
+                                    </h5>
+                                </div>
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        <img src="{{ url_for('static', filename='qrcode_wechat.png') }}" 
+                                             alt="WeChat QR Code" 
+                                             class="img-fluid" 
+                                             style="max-width: 280px; border: 2px solid #07c160; border-radius: 10px; padding: 10px; background: white;">
+                                    </div>
+                                    <div class="mb-3">
+                                        <h5 class="mb-1">
+                                            {% if lang == 'en' %}俊光Jager{% elif lang == 'both' %}俊光Jager{% else %}俊光Jager{% endif %}
+                                        </h5>
+                                        <p class="text-muted mb-0">
+                                            <i class="bi bi-geo-alt me-1"></i>广东 广州
+                                        </p>
+                                    </div>
+                                    <div class="alert alert-success mb-0">
+                                        <h6 class="mb-2">
+                                            {% if lang == 'en' %}WeChat ID:{% elif lang == 'both' %}微信号 WeChat ID:{% else %}微信号：{% endif %}
+                                        </h6>
+                                        <h4 class="mb-2 fw-bold text-success">zxyzjj12333</h4>
+                                        <p class="mb-0 small">
+                                            {% if lang == 'en' %}Scan the QR code above or search the WeChat ID to add as friend{% elif lang == 'both' %}扫描上方二维码或搜索微信号添加好友{% else %}扫描上方二维码或搜索微信号添加好友{% endif %}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <p class="mb-3">
+                            {% if lang == 'en' %}
+                                Our support team is here to assist you
+                            {% elif lang == 'both' %}
+                                我们的支持团队随时为您提供帮助
+                                <br>Our support team is here to assist you
+                            {% else %}
+                                我们的支持团队随时为您提供帮助
+                            {% endif %}
+                        </p>
+                        <div class="d-flex justify-content-center gap-3 flex-wrap">
+                            <a href="mailto:support@example.com" class="btn btn-outline-primary">
+                                <i class="bi bi-envelope me-2"></i>
+                                {% if lang != 'en' %}发送邮件{% else %}Email Support{% endif %}
+                            </a>
+                            <a href="#" class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#feedbackModal">
+                                <i class="bi bi-chat-dots me-2"></i>
+                                {% if lang != 'en' %}在线反馈{% else %}Online Feedback{% endif %}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 反馈模态框 -->
+<div class="modal fade" id="feedbackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    {% if lang == 'en' %}Submit Feedback{% elif lang == 'both' %}提交反馈 Submit Feedback{% else %}提交反馈{% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="feedbackForm">
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {% if lang == 'en' %}Problem Description{% elif lang == 'both' %}问题描述 Problem Description{% else %}问题描述{% endif %}
+                        </label>
+                        <textarea class="form-control" rows="4" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {% if lang == 'en' %}Steps to Reproduce{% elif lang == 'both' %}操作步骤 Steps to Reproduce{% else %}操作步骤{% endif %}
+                        </label>
+                        <textarea class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">
+                            {% if lang == 'en' %}Contact Email (Optional){% elif lang == 'both' %}联系邮箱（选填） Contact Email (Optional){% else %}联系邮箱（选填）{% endif %}
+                        </label>
+                        <input type="email" class="form-control">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    {% if lang != 'en' %}取消{% else %}Cancel{% endif %}
+                </button>
+                <button type="button" class="btn btn-primary" onclick="submitFeedback()">
+                    {% if lang != 'en' %}提交{% else %}Submit{% endif %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.hover-shadow {
+    transition: box-shadow 0.3s ease;
+}
+.hover-shadow:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+.faq-link {
+    color: #495057;
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.faq-link:hover {
+    color: #0d6efd;
+    text-decoration: underline;
+}
+</style>
+
+<script>
+// 搜索功能
+document.getElementById('searchBtn').addEventListener('click', performSearch);
+document.getElementById('faqSearchInput').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        performSearch();
+    }
+});
+
+// FAQ 链接点击
+document.querySelectorAll('.faq-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const question = this.getAttribute('data-question');
+        document.getElementById('faqSearchInput').value = question;
+        performSearch();
+    });
+});
+
+function performSearch() {
+    const query = document.getElementById('faqSearchInput').value.trim();
+    if (!query) return;
+    
+    fetch(`/api/faq/search?q=${encodeURIComponent(query)}`)
+        .then(response => response.json())
+        .then(data => {
+            displayResults(data.results);
+        })
+        .catch(error => {
+            console.error('Search error:', error);
+        });
+}
+
+function displayResults(results) {
+    const resultsDiv = document.getElementById('searchResults');
+    const contentDiv = document.getElementById('resultsContent');
+    
+    if (results.length === 0) {
+        contentDiv.innerHTML = `
+            <p>{% if lang == 'en' %}No results found. Try different keywords or browse categories below.{% elif lang == 'both' %}未找到结果。请尝试其他关键词或浏览下方分类。{% else %}未找到结果。请尝试其他关键词或浏览下方分类。{% endif %}</p>
+        `;
+    } else {
+        contentDiv.innerHTML = results.map(result => `
+            <div class="mb-3 p-3 bg-white rounded">
+                <h6 class="text-primary mb-2">
+                    <i class="bi bi-bookmark-check me-1"></i>
+                    ${result.category}: ${result.question}
+                </h6>
+                <p class="mb-0" style="white-space: pre-line;">${result.answer}</p>
+            </div>
+        `).join('');
+    }
+    
+    resultsDiv.style.display = 'block';
+    resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// 加载常见问题建议
+function loadSuggestions() {
+    fetch('/api/faq/suggestions')
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('suggestionsList');
+            container.innerHTML = data.suggestions.map(suggestion => `
+                <button class="btn btn-sm btn-outline-secondary me-2 mb-2" 
+                        onclick="document.getElementById('faqSearchInput').value='${suggestion.question}'; performSearch();">
+                    ${suggestion.question}
+                </button>
+            `).join('');
+        })
+        .catch(error => console.error('Error loading suggestions:', error));
+}
+
+// 提交反馈
+function submitFeedback() {
+    const form = document.getElementById('feedbackForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+    
+    // TODO: 实现反馈提交逻辑
+    alert('{% if lang == "en" %}Thank you for your feedback!{% elif lang == "both" %}感谢您的反馈！ Thank you for your feedback!{% else %}感谢您的反馈！{% endif %}');
+    
+    const modal = bootstrap.Modal.getInstance(document.getElementById('feedbackModal'));
+    modal.hide();
+    form.reset();
+}
+
+// 页面加载时加载建议
+document.addEventListener('DOMContentLoaded', loadSuggestions);
+</script>
+{% endblock %}
