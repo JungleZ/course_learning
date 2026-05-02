@@ -25,7 +25,7 @@
         
         <div class="card-body p-0">
             <!-- 会议信息（支持多语言） -->
-<div class="p-3 border-bottom no-print">
+            <div class="p-3 border-bottom no-print">
                 <div class="row">
                     <div class="col-md-3">
                         {% if lang == 'en' %}<strong>No.:</strong>
@@ -33,20 +33,6 @@
                         {% else %}<strong>编号：</strong>{% endif %}
                         {{ meeting.meeting_id }}
                     </div>
-                    <div class="col-md-4">
-                        {% if lang == 'en' %}<strong>Time:</strong>
-                        {% elif lang == 'both' %}<strong>时间 Time:</strong>
-                        {% else %}<strong>时间：</strong>{% endif %}
-                        {% if lang == 'en' and meeting.time_en %}{{ meeting.time_en }}{% else %}{{ meeting.time }}{% endif %}
-                    </div>
-                    <div class="col-md-5">
-                        {% if lang == 'en' %}<strong>Venue:</strong>
-                        {% elif lang == 'both' %}<strong>地址 Venue:</strong>
-                        {% else %}<strong>地址：</strong>{% endif %}
-                        {% if lang == 'en' and meeting.address_en %}{{ meeting.address_en }}{% else %}{{ meeting.address or 'TBD' }}{% endif %}
-                    </div>
-                </div>
-            </div>
                     <div class="col-md-4">
                         {% if lang == 'en' %}<strong>Time:</strong>
                         {% elif lang == 'both' %}<strong>时间 Time:</strong>

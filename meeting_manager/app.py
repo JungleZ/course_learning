@@ -272,6 +272,7 @@ def init_db():
             ('workshop_en', 'TEXT'),
             ('workshop_duration', 'INTEGER DEFAULT 30'),
             ('workshop_speaker', 'TEXT'),
+            ('workshop_speaker_en', 'TEXT'),
         ]
         for field, dtype in new_fields:
             if field not in columns:
@@ -706,6 +707,7 @@ def create_meeting():
         fee_info_en = request.form.get('fee_info_en', '')
         workshop_enabled = request.form.get('workshop_enabled') == 'on'
         workshop_speaker = request.form.get('workshop_speaker', '')
+        workshop_speaker_en = request.form.get('workshop_speaker_en', '')
         workshop_zh = request.form.get('workshop_zh', '')
         workshop_en = request.form.get('workshop_en', '')
         workshop_duration = request.form.get('workshop_duration', '30')
@@ -713,6 +715,7 @@ def create_meeting():
         # If workshop is not enabled, clear the workshop fields
         if not workshop_enabled:
             workshop_speaker = ''
+            workshop_speaker_en = ''
             workshop_zh = ''
             workshop_en = ''
             workshop_duration = '30'
@@ -720,8 +723,8 @@ def create_meeting():
         conn = get_db_connection()
         try:
             conn.execute(
-                "INSERT INTO meetings (meeting_id, theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en, workshop_speaker, workshop_zh, workshop_en, workshop_duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (meeting_id, theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en, workshop_speaker, workshop_zh, workshop_en, workshop_duration)
+                "INSERT INTO meetings (meeting_id, theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en, workshop_speaker, workshop_speaker_en, workshop_zh, workshop_en, workshop_duration) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (meeting_id, theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en, workshop_speaker, workshop_speaker_en, workshop_zh, workshop_en, workshop_duration)
             )
             meeting_db_id = conn.execute('SELECT id FROM meetings WHERE meeting_id = ?', (meeting_id,)).fetchone()['id']
             for role in DEFAULT_ROLES:
@@ -758,6 +761,7 @@ def edit_meeting(meeting_db_id):
         fee_info_en = request.form.get('fee_info_en', '')
         workshop_enabled = request.form.get('workshop_enabled') == 'on'
         workshop_speaker = request.form.get('workshop_speaker', '')
+        workshop_speaker_en = request.form.get('workshop_speaker_en', '')
         workshop_zh = request.form.get('workshop_zh', '')
         workshop_en = request.form.get('workshop_en', '')
         workshop_duration = request.form.get('workshop_duration', '30')
@@ -765,14 +769,15 @@ def edit_meeting(meeting_db_id):
         # If workshop is not enabled, clear the workshop fields
         if not workshop_enabled:
             workshop_speaker = ''
+            workshop_speaker_en = ''
             workshop_zh = ''
             workshop_en = ''
             workshop_duration = '30'
         
         conn.execute("""
-            UPDATE meetings SET theme = ?, english_theme = ?, time = ?, time_en = ?, address = ?, address_en = ?, fee_info = ?, fee_info_en = ?, workshop_speaker = ?, workshop_zh = ?, workshop_en = ?, workshop_duration = ?
+            UPDATE meetings SET theme = ?, english_theme = ?, time = ?, time_en = ?, address = ?, address_en = ?, fee_info = ?, fee_info_en = ?, workshop_speaker = ?, workshop_speaker_en = ?, workshop_zh = ?, workshop_en = ?, workshop_duration = ?
             WHERE id = ?
-        """, (theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en, workshop_speaker, workshop_zh, workshop_en, workshop_duration, meeting_db_id))
+        """, (theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en, workshop_speaker, workshop_speaker_en, workshop_zh, workshop_en, workshop_duration, meeting_db_id))
         conn.commit()
         flash('会议信息已更新！', 'success')
         conn.close()
@@ -972,6 +977,7 @@ def generate_agenda(meeting_db_id):
     
     # 获取工作坊信息
     workshop_speaker = meeting['workshop_speaker'] if meeting['workshop_speaker'] else None
+    workshop_speaker_en = meeting['workshop_speaker_en'] if meeting['workshop_speaker_en'] else None
     workshop_zh = meeting['workshop_zh'] if meeting['workshop_zh'] else None
     workshop_en = meeting['workshop_en'] if meeting['workshop_en'] else None
     workshop_duration = int(meeting['workshop_duration']) if meeting['workshop_duration'] else 30
@@ -993,17 +999,24 @@ def generate_agenda(meeting_db_id):
                     workshop_activity = f"{workshop_en if workshop_en else ''} {workshop_zh if workshop_zh else ''}"
                 
                 # Add speaker name to the activity
+                if lang == 'en' and workshop_speaker_en:
+                    speaker_name = workshop_speaker_en
+                elif lang == 'zh':
+                    speaker_name = workshop_speaker if workshop_speaker else ''
+                else:  # both
+                    speaker_name = workshop_speaker_en if workshop_speaker_en else workshop_speaker
+                
                 if workshop_activity:
-                    workshop_activity += f" ({workshop_speaker})"
+                    workshop_activity += f" ({speaker_name})"
                 else:
-                    workshop_activity = f"Workshop ({workshop_speaker})"
+                    workshop_activity = f"Workshop ({speaker_name})"
                 
                 agenda.append({
                     "time": f"{current_min//60:02d}:{current_min%60:02d}",
                     "phase": "workshop",
                     "activity": workshop_activity,
                     "duration": workshop_duration,
-                    "role": workshop_speaker
+                    "role": speaker_name
                 })
                 current_min += workshop_duration
             continue  # 跳过workshop阶段，因为它不是从模板生成的
@@ -1039,16 +1052,21 @@ def generate_agenda(meeting_db_id):
         # Speech: dynamic PS entries
         if phase_key == 'speech':
             for i in range(1, 5):
-                # Use the exact name_zh from DEFAULT_ROLES for lookup as stored in DB
-                ps_role_key = f'备稿演讲{i}'
-                ie_role_key = f'个评{i}'
+                # Find matching PS role in reg_dict - support both formats
+                ps_member = None
+                for role_name, member in reg_dict.items():
+                    if f'备稿演讲{i}' in role_name or f'PS{i}' in role_name:
+                        ps_member = member
+                        break
                 
-                if ps_role_key in reg_dict:
-                    member = reg_dict[ps_role_key]
+                if ps_member:
                     # TOM brief introduction
-                    # Note: '总主持(TOM)' might also need to be just '总主持' depending on DB storage
-                    # Looking at create_meeting, it uses role['name_zh'] which is '总主持'
-                    tom_member = get_role_member(reg_dict, '总主持')
+                    tom_member = None
+                    for role_name, member in reg_dict.items():
+                        if '总主持' in role_name or 'TOM' in role_name:
+                            tom_member = member
+                            break
+                    
                     if lang == 'en':
                         intro = f"Brief introduction ({tom_member or 'TOM'})"
                     elif lang == 'zh':
@@ -1067,7 +1085,7 @@ def generate_agenda(meeting_db_id):
                     
                     # PS speech
                     if lang == 'en':
-                        act = f"PS{i} Prepared Speech {i} ({member})"
+                        act = f"PS{i} Prepared Speech {i} ({ps_member})"
                     elif lang == 'zh':
                         act = f"PS{i} 备稿演讲{i}（{member}）"
                     else:
@@ -1079,7 +1097,7 @@ def generate_agenda(meeting_db_id):
                         "phase": phase_key,
                         "activity": act,
                         "duration": duration,
-                        "role": member
+                        "role": ps_member
                     })
                     current_min += duration
         

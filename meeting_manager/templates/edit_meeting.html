@@ -84,6 +84,13 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="workshop_speaker_en" class="form-label">{% if lang == 'en' %}Workshop Speaker (English) - Optional{% else %}主讲人英文名 - 可选{% endif %}</label>
+                            <input type="text" class="form-control" id="workshop_speaker_en" name="workshop_speaker_en"
+                                   value="{{ meeting.workshop_speaker_en or '' }}"
+                                   placeholder="{% if lang == 'en' %}e.g. John Doe{% else %}可选：填后可在英文模式下显示{% endif %}">
+                        </div>
+
+                        <div class="mb-3">
                             <label for="workshop_zh" class="form-label">{% if lang == 'en' %}Workshop Name (Chinese){% else %}工作坊名称{% endif %}</label>
                             <input type="text" class="form-control" id="workshop_zh" name="workshop_zh" value="{{ meeting.workshop_zh or '' }}">
                         </div>
