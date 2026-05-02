@@ -116,12 +116,16 @@
                         </thead>
                         <tbody>
                             {% for role in roles %}
-                            <tr>
-                                <td><strong>{{ role.display_name }}</strong>{% if role.member_only %}<span class="badge bg-warning ms-1" title="{% if lang == 'en' %}Members only{% else %}仅限会员报名{% endif %}">🔒</span>{% endif %}</td>
+                            <tr{% if role.is_default_assigned and not role.has_registration %} class="table-light"{% endif %}>
+                                <td><strong>{{ role.display_name }}</strong>{% if role.member_only %}<span class="badge bg-warning ms-1" title="{% if lang == 'en' %}Members only{% else %}仅限会员报名{% endif %}">🔒</span>{% endif %}{% if role.is_default_assigned and not role.has_registration %}<span class="badge bg-info ms-1" title="{% if lang == 'en' %}Default assigned (can be overridden){% else %}默认分配（可被覆盖）{% endif %}">⭐</span>{% endif %}</td>
                                 <td><small class="text-muted" title="{{ role.description }}">{{ role.description[:20] }}...{% if not role.description %}{% if lang == 'en' %}No description{% else %}暂无描述{% endif %}{% endif %}</small></td>
                                 <td>
                                     {% if role.member_name %}
-                                    <span class="badge bg-success">{% if lang == 'en' %}Registered{% else %}已报名{% endif %}</span>
+                                        {% if role.is_default_assigned and not role.has_registration %}
+                                        <span class="badge bg-info">{% if lang == 'en' %}Default Assigned{% else %}默认分配{% endif %}</span>
+                                        {% else %}
+                                        <span class="badge bg-success">{% if lang == 'en' %}Registered{% else %}已报名{% endif %}</span>
+                                        {% endif %}
                                     {% else %}
                                     <span class="badge bg-secondary">{% if lang == 'en' %}Available{% else %}待报名{% endif %}</span>
                                     {% endif %}
@@ -134,15 +138,18 @@
                                     {% else %}
                                     <span class="badge bg-secondary ms-1">{% if lang == 'en' %}Guest{% else %}嘉宾{% endif %}</span>
                                     {% endif %}
+                                    {% if role.is_default_assigned and not role.has_registration %}
+                                    <small class="text-muted ms-2">({% if lang == 'en' %}default{% else %}默认{% endif %})</small>
+                                    {% endif %}
                                     {% else %}
                                     <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
                                 <td>
-                                    {% if not role.member_name %}
+                                    {% if not role.has_registration %}
                                     <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" 
                                             data-bs-target="#registerForm{{ loop.index }}" aria-expanded="false">
-                                        <i class="bi bi-pencil me-1"></i>{% if lang == 'en' %}Register{% else %}报名{% endif %}
+                                        <i class="bi bi-pencil me-1"></i>{% if lang == 'en' %}Register{% else %}报名{% endif %}{% if role.is_default_assigned %} ({% if lang == 'en' %}Override{% else %}覆盖{% endif %}){% endif %}
                                     </button>
                                     <div class="collapse mt-2" id="registerForm{{ loop.index }}">
                                         <form method="POST" action="{{ url_for('register') }}">

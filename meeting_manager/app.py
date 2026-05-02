@@ -138,7 +138,7 @@ DEFAULT_ROLES = [
     {'name_zh': '即兴点评', 'name_en': 'Table Topics Evaluator', 'abbrev': 'TTE', 'member_only': True, 'desc_zh': '点评即兴演讲者表现', 'desc_en': 'Evaluates table topics speakers'},
     {'name_zh': '自由分享', 'name_en': 'Free Sharing', 'abbrev': 'Free', 'member_only': False, 'desc_zh': '开场自由分享环节', 'desc_en': 'Free sharing segment at opening'},
     {'name_zh': '嘉宾分享', 'name_en': 'Guest Sharing', 'abbrev': 'Guest', 'member_only': False, 'desc_zh': '会议结尾邀请嘉宾分享', 'desc_en': 'Invites guests to share at closing'},
-    {'name_zh': '会长', 'name_en': 'President', 'abbrev': 'President', 'member_only': True, 'desc_zh': '俱乐部最高领导，负责闭幕和颁奖', 'desc_en': 'Club leader, closing and awards'},
+    {'name_zh': '会长', 'name_en': 'President', 'abbrev': 'President', 'member_only': True, 'desc_zh': '俱乐部最高领导，负责闭幕和颁奖', 'desc_en': 'Club leader, closing and awards', 'default_member': 'Bass'},
 ]
 
 def get_role_display_name(role, lang='zh'):
@@ -423,131 +423,51 @@ def parse_meeting_from_post(text):
     Returns: (meeting_info_dict, [(role_name, member_name), ...])
     """
     meeting_info = {}
-    registrations = []
-    lines = text.strip().split('\n')
-    
-    # Role mapping (same as parse_wechat_signup)
-    role_mapping = {
-        'mm': '会议经理',
-        'master of ceremonies': '会议经理',
-        '主持人': '会议经理',
-        'saa': '接待官',
-        'sergeant at arms': '接待官',
-        '迎宾官': '接待官',
-        'opening remark': '开场致辞',
-        '开场词': '开场致辞',
-        'tom': '总主持',
-        'table topics master': '总主持',
-        '即兴主持': '总主持',
-        'timer': '时间官',
-        '计时官': '时间官',
-        'game master': '游戏官',
-        '游戏官': '游戏官',
-        'photographer': '摄影师',
-        '摄影师': '摄影师',
-        'ah-counter': '哼哈官',
-        'ah counter': '哼哈官',
-        '哼哈官': '哼哈官',
-        'grammarian': '语法官',
-        '语法官': '语法官',
-        'ge': '总点评',
-        'general evaluator': '总点评',
-        '总点评': '总点评',
-        'ttm': '即兴主持',
-        'table topics master': '即兴主持',
-        'tte': '即兴点评',
-        'table topics evaluator': '即兴点评',
-        '即兴点评': '即兴点评',
-        'speaker 1': '备稿演讲1',
-        'ps1': '备稿演讲1',
-        '备稿演讲1': '备稿演讲1',
-        'speaker 2': '备稿演讲2',
-        'ps2': '备稿演讲2',
-        '备稿演讲2': '备稿演讲2',
-        'speaker 3': '备稿演讲3',
-        'ps3': '备稿演讲3',
-        '备稿演讲3': '备稿演讲3',
-        'speaker 4': '备稿演讲4',
-        'ps4': '备稿演讲4',
-        '备稿演讲4': '备稿演讲4',
-        'ie 1': '个评1',
-        '个评1': '个评1',
-        'ie 2': '个评2',
-        '个评2': '个评2',
-        'ie 3': '个评3',
-        '个评3': '个评3',
-        'ie 4': '个评4',
-        '个评4': '个评4',
-        'president': '会长',
-        '会长': '会长',
-    }
-    
     import re
-    
-    # Parse meeting metadata
-    # Meeting number: GEM# 767 Meeting
-    match = re.search(r'(?:GEM|GEM#)\s*(\d+)', text, re.IGNORECASE)
+
+    # Parse meeting ID and theme from the heading line
+    match = re.search(r'GEM#?\s*(\d+)\s*(.*)', text, re.IGNORECASE)
     if match:
         meeting_info['meeting_id'] = match.group(1)
-    
-    # Date: (Monday, 30 Mar. 2026)
-    match = re.search(r'\((\w+,\s+\d+\s+\w+\.\s+\d{4})\)', text)
+        theme_text = match.group(2).strip()
+        if theme_text and theme_text.lower() != 'meeting':
+            meeting_info['theme'] = theme_text
+
+    if 'meeting_id' in meeting_info and not meeting_info.get('theme'):
+        meeting_info['theme'] = f'GEM#{meeting_info["meeting_id"]} Meeting'
+
+    # Parse date / english theme
+    match = re.search(r'\(([^\)]+\d{4})\)', text)
     if match:
-        meeting_info['english_theme'] = match.group(1)
-    
+        meeting_info['english_theme'] = match.group(1).strip()
+
     # Time: 🕤Time: 19:20 - 21:20
-    match = re.search(r'(?:Time|时间)[:：]\s*(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})', text)
+    match = re.search(r'(?:Time|时间)[:：]\s*(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})', text)
     if match:
         meeting_info['time'] = match.group(1)
         meeting_info['time_en'] = match.group(1)
-    
+    else:
+        match = re.search(r'(?:Time|时间)[:：]\s*(\d{1,2}:\d{2})', text)
+        if match:
+            meeting_info['time'] = match.group(1)
+            meeting_info['time_en'] = match.group(1)
+
     # Address
     match = re.search(r'(?:地址|Venue|Address)[:：]\s*(.+)', text)
     if match:
         address = match.group(1).strip()
         meeting_info['address'] = address
         meeting_info['address_en'] = address
-    
+
     # Fee info
     match = re.search(r'(?:非会员需分摊场地费|Fee)[:：]\s*(.+)', text)
     if match:
         fee = match.group(1).strip()
         meeting_info['fee_info'] = f'非会员需分摊场地费：{fee}'
         meeting_info['fee_info_en'] = f'Fee: {fee}'
-    
-    # Parse registrations
-    role_pattern = re.compile(r'^([^:：]+)[:：]\s*(.+)$')
-    
-    for line in lines:
-        line = line.strip()
-        if not line or line.startswith('#') or line.startswith('欢迎') or line.startswith('Welcome'):
-            continue
-        
-        # Skip numbered list at the end
-        if re.match(r'^\d+\.\s+\S+$', line):
-            continue
-        
-        # Match "Role: Name" pattern
-        match = role_pattern.match(line)
-        if match:
-            role_key = match.group(1).strip().lower()
-            members_str = match.group(2).strip()
-            
-            if not members_str or members_str.lower() in ['tbd', '']:
-                continue
-            
-            standard_role = role_mapping.get(role_key)
-            if not standard_role:
-                for key, value in role_mapping.items():
-                    if key in role_key or role_key in key:
-                        standard_role = value
-                        break
-            
-            if standard_role:
-                members = [m.strip() for m in members_str.split('/') if m.strip()]
-                for member in members:
-                    registrations.append((standard_role, member))
-    
+
+    # Parse registrations using the shared WeChat signup parser
+    registrations = parse_wechat_signup(text)
     return meeting_info, registrations
 
 def parse_wechat_signup(text):
@@ -918,13 +838,30 @@ def meeting_detail(meeting_db_id):
         display_name = get_role_display_name_lang(role_name, lang)
         role_desc = get_role_description(role_name, lang)
         member_only = is_member_only_role(role_name)
+        
+        # 检查是否有默认成员设置
+        default_member = None
+        for r in DEFAULT_ROLES:
+            if r['name_zh'] == role_name and 'default_member' in r:
+                default_member = r['default_member']
+                break
+        
+        # 如果角色无人报名且有默认成员，则显示默认成员
+        member_name = role['member_name']
+        is_default_assigned = False
+        if not member_name and default_member:
+            member_name = default_member
+            is_default_assigned = True
+        
         roles_with_info.append({
             'role_name': role_name,
             'display_name': display_name,
             'description': role_desc,
-            'member_name': role['member_name'],
+            'member_name': member_name,
             'is_member': role['is_member'],
-            'member_only': member_only
+            'member_only': member_only,
+            'is_default_assigned': is_default_assigned,
+            'has_registration': role['member_name'] is not None  # 标记是否有人真正报名
         })
     
     registered_members = conn.execute("""SELECT reg.member_name, m.is_member, GROUP_CONCAT(reg.role_name) as roles
