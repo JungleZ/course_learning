@@ -229,8 +229,8 @@ PHASE_TEMPLATES = {
         {"activity_zh": "时间官报告", "activity_en": "Timer report", "duration": 2, "role": "时间官(Timer)"},
         {"activity_zh": "语法官报告", "activity_en": "Grammarian report", "duration": 2, "role": "语法官(Grammarian)"},
         {"activity_zh": "哼哈官报告", "activity_en": "Ah-Counter report", "duration": 2, "role": "哼哈官(Ah-Counter)"},
-        {"activity_zh": "最佳投票", "activity_en": "Vote for the Best", "duration": 1, "role": "总主持(TOM)"},
         {"activity_zh": "总点评报告", "activity_en": "General evaluator report", "duration": 7, "role": "总点评(GE)"},
+        {"activity_zh": "最佳投票", "activity_en": "Vote for the Best", "duration": 1, "role": "总主持(TOM)"},
         {"activity_zh": "嘉宾分享", "activity_en": "Guest sharing", "duration": 3, "role": "嘉宾分享(Guest Sharing)", "default_member": "Bass"},
         {"activity_zh": "颁奖环节", "activity_en": "Awarding time", "duration": 3, "role": "President", "default_member": "Bass"},
         {"activity_zh": "闭幕词", "activity_en": "Closing remarks", "duration": 2, "role": "President", "default_member": "Bass"},
@@ -417,13 +417,29 @@ def create_meeting_from_post():
     return render_template('create_from_post.html')
 
 
+def normalize_wechat_post_text(text):
+    """
+    Normalize WeChat post text before parsing.
+    """
+    if not text:
+        return ''
+
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+    text = text.replace('：', ':').replace('；', ';').replace('，', ',')
+    text = text.replace('（', '(').replace('）', ')')
+    text = re.sub(r'[—–−]+', '-', text)
+    text = re.sub(r'\s*:\s*', ': ', text)
+    text = re.sub(r'^[\-\*\u2022]\s*', '', text, flags=re.M)
+    return text.strip()
+
+
 def parse_meeting_from_post(text):
     """
     Parse WeChat group post and extract meeting info and registrations.
     Returns: (meeting_info_dict, [(role_name, member_name), ...])
     """
     meeting_info = {}
-    import re
+    text = normalize_wechat_post_text(text)
 
     # Parse meeting ID and theme from the heading line
     match = re.search(r'GEM#?\s*(\d+)\s*(.*)', text, re.IGNORECASE)
@@ -477,6 +493,7 @@ def parse_wechat_signup(text):
     Returns: list of (role_name, member_name) tuples
     """
     registrations = []
+    text = normalize_wechat_post_text(text)
     lines = text.strip().split('\n')
     
     # Role mapping from Chinese/abbreviated/English to standard DB role names (name_zh from DEFAULT_ROLES)
