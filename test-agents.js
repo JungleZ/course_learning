@@ -7,7 +7,7 @@ const options = {
   method: 'GET',
   headers: {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer b38232e2080347df924b7987e2f770f6b87223e677a3b6d9'
+    'Authorization': 'Bearer b38232e2080347df924b7987e2f770f6b87223e67'
   }
 };
 
