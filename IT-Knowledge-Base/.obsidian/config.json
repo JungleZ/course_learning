@@ -1,0 +1,31 @@
+{
+  "theme": "default",
+  "interfaceTheme": "default",
+  "baseFontSize": 14,
+  "fontFamily": "system-ui",
+  "leafWidth": 300,
+  "monospaceFontFamily": "JetBrains Mono",
+  "zoom": 1,
+  "auto-preview": true,
+  "attachmentFolderPath": "attachments",
+  "newFileLocation": "current",
+  "newFileFormat": "markdown",
+  "promptDelete": true,
+  "alwaysUpdateLinks": true,
+  "defaultViewMode": "default",
+  "quickSwitcher": "all-files",
+  "slashCommand": true,
+  "slashCommandCompletion": true,
+  "templateSearchLocation": "template",
+  "templateNewFileLocation": "current",
+  "vim": {
+    "mode": "normal",
+    "useCtrlKeys": true,
+    "useMetaKeys": true,
+    "escToExitInsertMode": true
+  },
+  "enabledCssSnippets": [],
+  "enabledPlugins": [],
+  "disabledPlugins": [],
+  "pluginVersions": {}
+}
