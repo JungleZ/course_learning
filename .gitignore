@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+mlflow_env/
+ENV/
+
+# MLflow
+mlruns/
+mlflow-learning/
+
+# Models (large files)
+*.pt
+*.pth
+*.h5
+*.pkl
+
+# Data
+data/
+*.csv
+*.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Windows
+nul
