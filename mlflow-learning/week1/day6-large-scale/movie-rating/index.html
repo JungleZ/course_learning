@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>情感分析系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .result.positive {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .result.negative {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .emoji {
+            font-size: 40px;
+        }
+
+        .sentiment-text {
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .confidence {
+            margin-top: 15px;
+        }
+
+        .confidence-bar {
+            height: 10px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: white;
+            border-radius: 5px;
+            transition: width 0.5s ease;
+        }
+
+        .prob-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .prob-item {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .prob-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .prob-value {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .examples {
+            margin-top: 20px;
+        }
+
+        .examples-title {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+
+        .example-btn {
+            display: inline-block;
+            padding: 8px 15px;
+            background: #f0f0f0;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.2s;
+        }
+
+        .example-btn:hover {
+            background: #e0e0e0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>评论情感分析系统</h1>
+
+        <div class="input-group">
+            <label for="comment">请输入评论内容：</label>
+            <textarea id="comment" placeholder="在这里输入你的评论..."></textarea>
+        </div>
+
+        <button id="analyzeBtn" onclick="analyze()">开始分析</button>
+
+        <div class="loading" id="loading">分析中...</div>
+
+        <div class="result" id="result">
+            <div class="result-header">
+                <span class="emoji" id="emoji"></span>
+                <span class="sentiment-text" id="sentimentText"></span>
+            </div>
+            <div class="confidence">
+                <span>置信度：<strong id="confidenceValue"></strong></span>
+                <div class="confidence-bar">
+                    <div class="confidence-fill" id="confidenceBar" style="width: 0%"></div>
+                </div>
+            </div>
+            <div class="prob-grid">
+                <div class="prob-item">
+                    <div class="prob-label">正面概率</div>
+                    <div class="prob-value" id="positiveProb"></div>
+                </div>
+                <div class="prob-item">
+                    <div class="prob-label">负面概率</div>
+                    <div class="prob-value" id="negativeProb"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="examples">
+            <div class="examples-title">试试这些例子：</div>
+            <span class="example-btn" onclick="setExample('This movie is amazing! I absolutely loved it, great acting and plot!')">正面评论</span>
+            <span class="example-btn" onclick="setExample('Terrible movie, waste of time. Boring and awful, do not watch!')">负面评论</span>
+            <span class="example-btn" onclick="setExample('The film was okay, not great but not bad either.')">中性评论</span>
+        </div>
+    </div>
+
+    <script>
+        function setExample(text) {
+            document.getElementById('comment').value = text;
+        }
+
+        async function analyze() {
+            const comment = document.getElementById('comment').value.trim();
+            const btn = document.getElementById('analyzeBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+
+            if (!comment) {
+                alert('请输入评论内容');
+                return;
+            }
+
+            btn.disabled = true;
+            loading.style.display = 'block';
+            result.style.display = 'none';
+
+            try {
+                const response = await fetch('http://localhost:5000/predict', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: comment })
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    showResult(data);
+                }
+            } catch (error) {
+                alert('请求失败，请确保 API 服务已启动');
+            }
+
+            btn.disabled = false;
+            loading.style.display = 'none';
+        }
+
+        function showResult(data) {
+            const result = document.getElementById('result');
+            const emoji = document.getElementById('emoji');
+            const sentimentText = document.getElementById('sentimentText');
+            const confidenceValue = document.getElementById('confidenceValue');
+            const confidenceBar = document.getElementById('confidenceBar');
+            const positiveProb = document.getElementById('positiveProb');
+            const negativeProb = document.getElementById('negativeProb');
+
+            result.style.display = 'block';
+
+            if (data.sentiment === 'positive') {
+                result.className = 'result positive';
+                emoji.textContent = '😊';
+                sentimentText.textContent = '正面评论';
+            } else {
+                result.className = 'result negative';
+                emoji.textContent = '😞';
+                sentimentText.textContent = '负面评论';
+            }
+
+            const confidence = (data.confidence * 100).toFixed(1);
+            confidenceValue.textContent = confidence + '%';
+            confidenceBar.style.width = confidence + '%';
+            positiveProb.textContent = (data.positive_prob * 100).toFixed(1) + '%';
+            negativeProb.textContent = (data.negative_prob * 100).toFixed(1) + '%';
+        }
+
+        // 回车提交
+        document.getElementById('comment').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                analyze();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# 数据文件
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# 模型文件
+models/*
+
+# MLflow 日志
+mlruns/
+logs/
+
+# 临时文件
+*.pyc
+__pycache__/
+.DS_Store

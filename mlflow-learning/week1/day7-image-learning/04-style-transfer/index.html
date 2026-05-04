@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图像风格迁移</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            padding: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #1a1a2e;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .upload-section {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-section:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #667eea;
+            background: #f0f4ff;
+        }
+
+        .upload-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .upload-input {
+            display: none;
+        }
+
+        .preview-section {
+            display: none;
+            margin-bottom: 20px;
+        }
+
+        .preview-section.active {
+            display: block;
+        }
+
+        .preview-container {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .preview-box {
+            flex: 1;
+            min-width: 250px;
+            max-width: 350px;
+        }
+
+        .preview-label {
+            text-align: center;
+            color: #666;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+
+        .preview-image {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .styles-section {
+            margin-bottom: 20px;
+        }
+
+        .styles-label {
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .styles-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 10px;
+        }
+
+        .style-btn {
+            padding: 12px 15px;
+            background: #f5f5f5;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            text-align: center;
+        }
+
+        .style-btn:hover {
+            background: #e8f0fe;
+            border-color: #667eea;
+        }
+
+        .style-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+
+        .apply-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .apply-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .apply-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #fee;
+            color: #c00;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .tips {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .tips strong {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 图像风格迁移</h1>
+        <p class="subtitle">上传图片，选择风格，一键生成艺术照</p>
+
+        <div class="error" id="error"></div>
+
+        <div class="upload-section" id="uploadSection">
+            <div class="upload-icon">📁</div>
+            <p class="upload-text">点击或拖拽上传图片<br>支持 JPG, PNG 格式</p>
+            <input type="file" class="upload-input" id="uploadInput" accept="image/*">
+        </div>
+
+        <div class="preview-section" id="previewSection">
+            <div class="preview-container">
+                <div class="preview-box">
+                    <p class="preview-label">📤 原图</p>
+                    <img id="originalPreview" class="preview-image" alt="原图">
+                </div>
+                <div class="preview-box">
+                    <p class="preview-label" id="resultLabel">📥 结果</p>
+                    <img id="resultPreview" class="preview-image" alt="结果">
+                </div>
+            </div>
+        </div>
+
+        <div class="styles-section">
+            <label class="styles-label">选择风格：</label>
+            <div class="styles-grid" id="stylesGrid"></div>
+        </div>
+
+        <button class="apply-btn" id="applyBtn" onclick="applyStyle()">应用风格</button>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>正在处理图片...</p>
+        </div>
+
+        <div class="tips">
+            <strong>💡 使用提示：</strong>
+            1. 上传清晰的照片效果更好<br>
+            2. 素描风格适合建筑和风景<br>
+            3. 油画风格适合人物和自然<br>
+            4. 复古风格适合怀旧照片
+        </div>
+    </div>
+
+    <script>
+        let selectedStyle = 'original';
+        let uploadedImage = null;
+
+        // 加载风格列表
+        async function loadStyles() {
+            try {
+                const response = await fetch('/styles');
+                const styles = await response.json();
+
+                const grid = document.getElementById('stylesGrid');
+                grid.innerHTML = '';
+
+                styles.forEach(style => {
+                    const btn = document.createElement('div');
+                    btn.className = 'style-btn' + (style.id === 'original' ? ' active' : '');
+                    btn.textContent = style.name;
+                    btn.onclick = () => selectStyle(style.id, btn);
+                    grid.appendChild(btn);
+                });
+            } catch (error) {
+                console.error('加载风格失败:', error);
+            }
+        }
+
+        function selectStyle(styleId, btn) {
+            selectedStyle = styleId;
+            document.querySelectorAll('.style-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        // 文件上传
+        const uploadSection = document.getElementById('uploadSection');
+        const uploadInput = document.getElementById('uploadInput');
+
+        uploadSection.addEventListener('click', () => uploadInput.click());
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        uploadInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('请上传图片文件');
+                return;
+            }
+
+            uploadedImage = file;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById('originalPreview').src = e.target.result;
+                document.getElementById('previewSection').classList.add('active');
+                document.getElementById('resultPreview').src = e.target.result;
+                document.getElementById('resultLabel').textContent = '📥 结果';
+            };
+            reader.readAsDataURL(file);
+
+            hideError();
+        }
+
+        // 应用风格
+        async function applyStyle() {
+            if (!uploadedImage) {
+                showError('请先上传图片');
+                return;
+            }
+
+            const btn = document.getElementById('applyBtn');
+            const loading = document.getElementById('loading');
+
+            btn.disabled = true;
+            loading.classList.add('active');
+            hideError();
+
+            try {
+                const formData = new FormData();
+                formData.append('image', uploadedImage);
+                formData.append('style', selectedStyle);
+
+                const response = await fetch('/apply-style', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    document.getElementById('resultPreview').src = data.image;
+                    document.getElementById('resultLabel').textContent = `📥 ${data.style_name}风格`;
+                }
+            } catch (error) {
+                showError('请求失败，请确保服务已启动');
+            }
+
+            btn.disabled = false;
+            loading.classList.remove('active');
+        }
+
+        function showError(msg) {
+            const error = document.getElementById('error');
+            error.textContent = msg;
+            error.classList.add('active');
+        }
+
+        function hideError() {
+            document.getElementById('error').classList.remove('active');
+        }
+
+        // 初始化
+        loadStyles();
+    </script>
+</body>
+</html>
