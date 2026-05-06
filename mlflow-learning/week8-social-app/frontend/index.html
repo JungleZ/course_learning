@@ -1590,22 +1590,32 @@
                     data.matches.forEach(match => {
                         const user = match.user;
                         const score = (match.compatibility_score * 100).toFixed(0);
-                        const item = document.createElement('div');
-                        item.className = 'chat-list-item';
-                        item.onclick = () => openChat(match.match_id, user);
-                        item.innerHTML = `
-                            <div class="user-avatar user-avatar-sm">
-                                ${user.avatar_url
-                                    ? `<img src="${API_BASE}/api/upload/avatar/${user.avatar_url}" onerror="this.parentNode.textContent='${user.username[0].toUpperCase()}'">`
-                                    : user.username[0].toUpperCase()}
+
+                        // 消息预览
+                        let msgPreview = '暂无消息';
+                        let msgTime = '';
+                        if (match.last_message) {
+                            msgPreview = match.last_message.length > 20 
+                                ? match.last_message.substring(0, 20) + '...' 
+                                : match.last_message;
+                            msgTime = match.last_time ? timeAgo(match.last_time) : '';
+                        }
+
+                        const card = document.createElement('div');
+                        card.className = 'match-card';
+                        card.innerHTML = `
+                            <div class="match-emoji">🎉</div>
+                            <div style="font-size:18px; margin-bottom:5px;">${user.username}</div>
+                            <div style="font-size:14px; color:rgba(255,255,255,0.8); margin-bottom:5px;">
+                                匹配度 ${score}%
                             </div>
-                            <div class="chat-list-info">
-                                <div class="chat-list-name">${user.username}</div>
-                                <div class="chat-list-preview">匹配度 ${score}% · 点击发消息</div>
+                            <div style="font-size:13px; color:rgba(255,255,255,0.6); margin:8px 0; padding:8px; background:rgba(255,255,255,0.1); border-radius:8px;">
+                                💬 ${msgPreview}
+                                <div style="font-size:11px; margin-top:3px;">${msgTime}</div>
                             </div>
-                            <span style="color:#ccc;">&gt;</span>
+                            <button class="btn" style="margin-top:5px; background:rgba(255,255,255,0.2);" onclick="openChat(${user.id}, '${user.username}')">💬 发消息</button>
                         `;
-                        list.appendChild(item);
+                        list.appendChild(card);
                     });
                 } else {
                     list.innerHTML = `

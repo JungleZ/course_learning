@@ -188,15 +188,33 @@ def get_matches():
 
     conn = get_db()
     matches = conn.execute('''SELECT m.*, u.id as matched_user_id, u.username, u.avatar_url
-                         FROM matches m
-                         JOIN users u ON (u.id = m.user2_id OR u.id = m.user1_id)
-                         WHERE (m.user1_id = ? OR m.user2_id = ?) AND m.status = "matched"
-                         AND u.id != ?''',
-                        (user_id, user_id, user_id)).fetchall()
+                             FROM matches m
+                             JOIN users u ON (u.id = m.user1_id OR u.id = m.user2_id)
+                             WHERE (m.user1_id = ? OR m.user2_id = ?) AND m.status = "matched"
+                             AND u.id != ?''',
+                            (user_id, user_id, user_id)).fetchall()
     conn.close()
 
     result = []
     for m in matches:
+        # 获取最后一条消息
+        conn2 = get_db()
+        last_msg = conn2.execute('''SELECT content, created_at, sender_id
+                                   FROM messages
+                                   WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?)
+                                   ORDER BY created_at DESC LIMIT 1''',
+                                  (user_id, m['matched_user_id'], m['matched_user_id'], user_id)).fetchone()
+        conn2.close()
+
+        last_message = ''
+        last_time = ''
+        if last_msg:
+            last_message = last_msg['content']
+            last_time = last_msg['created_at']
+            last_sender_id = last_msg['sender_id']
+        else:
+            last_sender_id = None
+
         result.append({
             'match_id': m['id'],
             'user': {
@@ -205,7 +223,10 @@ def get_matches():
                 'avatar_url': m['avatar_url']
             },
             'compatibility_score': m['compatibility_score'],
-            'created_at': m['created_at']
+            'created_at': m['created_at'],
+            'last_message': last_message,
+            'last_time': last_time,
+            'last_sender_id': last_sender_id
         })
 
     return jsonify({'matches': result})
