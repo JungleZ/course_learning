@@ -1701,12 +1701,12 @@
             const container = document.getElementById('chatMessages');
             try {
                 const response = await fetch(`${API_BASE}/api/messages/${userId}`, {
-                    headers: {'Authorization': `Bearer ${token}`}
-                });
+                            headers: {'Authorization': `Bearer ${token}`}
+                        });
                 const data = await response.json();
-
+            
                 container.innerHTML = '';
-
+            
                 if (data.messages && data.messages.length > 0) {
                     data.messages.forEach(msg => {
                         appendMessageBubble(msg);
@@ -1715,10 +1715,15 @@
                 } else {
                     container.innerHTML = `
                         <div class="empty-state" style="padding:30px 10px;">
-                            <div class="empty-state-icon" style="font-size:36px;">&#x1f4ac;</div>
+                            <div class="empty-state-icon" style="font-size:36px;">💬</div>
                             <p>开始聊天吧！</p>
                         </div>`;
                 }
+            } catch (error) {
+                container.innerHTML = '<p style="text-align:center; color:#c00;">加载消息失败</p>';
+                console.error('加载聊天记录失败:', error);
+            }
+        }
             } catch (error) {
                 container.innerHTML = '<p style="text-align:center; color:#c00;">加载消息失败</p>';
             }

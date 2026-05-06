@@ -18,6 +18,9 @@ mlruns/
 *.h5
 *.pkl
 
+# Databases
+*.db
+
 # Data
 data/
 *.csv

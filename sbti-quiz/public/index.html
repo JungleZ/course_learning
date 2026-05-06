@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>SBTI 沟通密码 | 发现你的行为风格</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; -webkit-text-size-adjust: 100%; }
+body {
+  font-family: 'Outfit', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  background: #08080f;
+  color: #e8e8f0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --s-color: #FF6B9D;
+  --s-glow: rgba(255,107,157,0.15);
+  --s-gradient: linear-gradient(135deg, #FF6B9D, #FF8A65);
+  --b-color: #6366F1;
+  --b-glow: rgba(99,102,241,0.15);
+  --b-gradient: linear-gradient(135deg, #6366F1, #A78BFA);
+  --t-color: #22D3EE;
+  --t-glow: rgba(34,211,238,0.15);
+  --t-gradient: linear-gradient(135deg, #06B6D4, #22D3EE);
+  --i-color: #FBBF24;
+  --i-glow: rgba(251,191,36,0.15);
+  --i-gradient: linear-gradient(135deg, #F59E0B, #FBBF24);
+  --card-bg: rgba(255,255,255,0.035);
+  --card-border: rgba(255,255,255,0.07);
+}
+
+/* ====== BG & PARTICLES ====== */
+.bg-layer {
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 15% 85%, rgba(99,102,241,0.07), transparent),
+    radial-gradient(ellipse 60% 70% at 85% 15%, rgba(255,107,157,0.05), transparent),
+    #08080f;
+}
+.particles { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.particle {
+  position: absolute; width: 2px; height: 2px;
+  background: rgba(255,255,255,0.25); border-radius: 50%;
+  animation: floatUp linear infinite;
+}
+@keyframes floatUp {
+  0% { transform: translateY(100vh) scale(0); opacity: 0; }
+  10% { opacity: 1; } 90% { opacity: 0.8; }
+  100% { transform: translateY(-10vh) scale(1); opacity: 0; }
+}
+
+/* ====== LAYOUT ====== */
+.app {
+  position: relative; z-index: 1; min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 24px 20px;
+}
+.screen {
+  width: 100%; max-width: 460px;
+  display: none; flex-direction: column; align-items: center;
+}
+.screen.active { display: flex; animation: screenIn 0.55s cubic-bezier(0.16,1,0.3,1) forwards; }
+.screen.leaving { animation: screenOut 0.35s cubic-bezier(0.7,0,0.84,0) forwards; }
+@keyframes screenIn { from { opacity:0; transform:translateY(28px); } to { opacity:1; transform:translateY(0); } }
+@keyframes screenOut { to { opacity:0; transform:translateY(-18px); } }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+@keyframes fadeInUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+@keyframes letterReveal {
+  from { opacity:0; transform:translateY(24px) scale(0.85); }
+  to { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes pulseGlow { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+@keyframes barGrow { from { width:0%; } }
+
+/* ====== WELCOME ====== */
+.welcome-badge {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 18px; background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 100px;
+  font-size: 0.78rem; color: rgba(255,255,255,0.5);
+  letter-spacing: 0.08em; margin-bottom: 44px;
+  animation: fadeIn 0.7s 0.2s both;
+}
+.welcome-badge .dot {
+  width: 6px; height: 6px; background: #22D3EE;
+  border-radius: 50%; animation: pulseGlow 2s infinite;
+}
+.logo-letters { display: flex; gap: 10px; margin-bottom: 28px; }
+.logo-letter {
+  font-family: 'Unbounded', sans-serif; font-weight: 900; font-size: 4.2rem; line-height: 1;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  opacity: 0; animation: letterReveal 0.65s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+.logo-letter:nth-child(1) { background-image: var(--s-gradient); animation-delay: 0.35s; }
+.logo-letter:nth-child(2) { background-image: var(--b-gradient); animation-delay: 0.5s; }
+.logo-letter:nth-child(3) { background-image: var(--t-gradient); animation-delay: 0.65s; }
+.logo-letter:nth-child(4) { background-image: var(--i-gradient); animation-delay: 0.8s; }
+.welcome-title {
+  font-size: 1.35rem; font-weight: 600; margin-bottom: 10px;
+  text-align: center; animation: fadeIn 0.6s 1s both;
+}
+.welcome-sub {
+  font-size: 0.92rem; color: rgba(255,255,255,0.45); text-align: center;
+  line-height: 1.75; margin-bottom: 44px; animation: fadeIn 0.6s 1.15s both;
+}
+.type-preview {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  width: 100%; margin-bottom: 44px; animation: fadeIn 0.6s 1.3s both;
+}
+.type-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; background: var(--card-bg);
+  border: 1px solid var(--card-border); border-radius: 14px;
+}
+.type-chip .letter {
+  font-family: 'Unbounded', sans-serif; font-weight: 700; font-size: 1.05rem;
+  width: 34px; height: 34px; display: flex; align-items: center;
+  justify-content: center; border-radius: 9px;
+}
+.type-chip .label { font-size: 0.85rem; color: rgba(255,255,255,0.65); }
+.type-chip.s .letter { background: var(--s-glow); color: var(--s-color); }
+.type-chip.b .letter { background: var(--b-glow); color: var(--b-color); }
+.type-chip.t .letter { background: var(--t-glow); color: var(--t-color); }
+.type-chip.i .letter { background: var(--i-glow); color: var(--i-color); }
+
+.btn-primary {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  width: 100%; max-width: 320px; padding: 18px 32px;
+  background: linear-gradient(135deg, #6366F1, #A78BFA);
+  border: none; border-radius: 16px; color: #fff;
+  font-family: inherit; font-size: 1.1rem; font-weight: 600;
+  cursor: pointer; transition: all 0.3s; animation: fadeIn 0.6s 1.5s both;
+  position: relative; overflow: hidden;
+}
+.btn-primary::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+  opacity: 0; transition: opacity 0.3s;
+}
+.btn-primary:hover::after { opacity: 1; }
+.btn-primary:active { transform: scale(0.97); }
+.btn-primary .arrow { transition: transform 0.3s; }
+.btn-primary:hover .arrow { transform: translateX(5px); }
+
+/* ====== QUIZ ====== */
+.progress-wrap { width: 100%; margin-bottom: 28px; }
+.progress-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.progress-label { font-size: 0.78rem; color: rgba(255,255,255,0.35); letter-spacing: 0.06em; }
+.progress-count { font-family: 'Unbounded', sans-serif; font-size: 0.82rem; font-weight: 700; color: rgba(255,255,255,0.6); }
+.progress-track { width: 100%; height: 3px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 3px; transition: width 0.55s cubic-bezier(0.16,1,0.3,1); background: linear-gradient(90deg, #6366F1, #A78BFA); }
+
+.scenario-card {
+  width: 100%; background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 20px; padding: 28px 24px; margin-bottom: 18px;
+}
+.scenario-icon { font-size: 2.2rem; margin-bottom: 14px; }
+.scenario-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; line-height: 1.5; }
+.scenario-desc { font-size: 0.9rem; color: rgba(255,255,255,0.45); line-height: 1.65; }
+
+.options-list { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+.option-btn {
+  width: 100%; padding: 17px 20px; background: var(--card-bg);
+  border: 1px solid var(--card-border); border-radius: 14px;
+  color: #e0e0ec; font-family: inherit; font-size: 0.91rem;
+  line-height: 1.55; text-align: left; cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16,1,0.3,1);
+  position: relative; overflow: hidden;
+}
+.option-btn::before {
+  content: ''; position: absolute; left: 0; top: 0;
+  width: 3px; height: 100%; opacity: 0; transition: opacity 0.25s;
+}
+.option-btn:hover {
+  background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.12);
+  transform: translateX(5px);
+}
+.option-btn:hover::before { opacity: 1; }
+.option-btn[data-t="S"]::before { background: var(--s-gradient); }
+.option-btn[data-t="B"]::before { background: var(--b-gradient); }
+.option-btn[data-t="T"]::before { background: var(--t-gradient); }
+.option-btn[data-t="I"]::before { background: var(--i-gradient); }
+
+.option-btn.selected { transform: translateX(5px); pointer-events: none; }
+.option-btn.selected[data-t="S"] { background: rgba(255,107,157,0.08); border-color: rgba(255,107,157,0.25); }
+.option-btn.selected[data-t="B"] { background: rgba(99,102,241,0.08); border-color: rgba(99,102,241,0.25); }
+.option-btn.selected[data-t="T"] { background: rgba(34,211,238,0.08); border-color: rgba(34,211,238,0.25); }
+.option-btn.selected[data-t="I"] { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.25); }
+.option-btn.selected::before { opacity: 1; }
+.option-btn.dimmed { opacity: 0.35; pointer-events: none; }
+
+/* ====== RESULT ====== */
+.result-glow {
+  position: absolute; width: 280px; height: 280px; border-radius: 50%;
+  filter: blur(90px); opacity: 0; pointer-events: none;
+  animation: glowReveal 1.6s 0.3s cubic-bezier(0.16,1,0.3,1) forwards;
+  top: -80px;
+}
+@keyframes glowReveal { to { opacity: 0.25; } }
+
+.result-badge {
+  display: flex; flex-direction: column; align-items: center;
+  margin-bottom: 36px; opacity: 0;
+  animation: badgeReveal 0.75s 0.2s cubic-bezier(0.16,1,0.3,1) forwards;
+}
+@keyframes badgeReveal {
+  from { opacity:0; transform:scale(0.82) translateY(20px); }
+  to { opacity:1; transform:scale(1) translateY(0); }
+}
+.result-big-letter {
+  font-family: 'Unbounded', sans-serif; font-weight: 900;
+  font-size: 5.5rem; line-height: 1;
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; margin-bottom: 10px;
+}
+.result-name { font-size: 1.35rem; font-weight: 700; margin-bottom: 6px; }
+.result-tagline { font-size: 0.88rem; color: rgba(255,255,255,0.45); }
+
+.radar-wrap {
+  width: 100%; display: flex; justify-content: center;
+  margin-bottom: 28px; opacity: 0; animation: fadeIn 0.6s 0.55s forwards;
+}
+
+.score-bars {
+  width: 100%; display: flex; flex-direction: column; gap: 12px;
+  margin-bottom: 28px; opacity: 0; animation: fadeIn 0.6s 0.7s forwards;
+}
+.score-row { display: flex; align-items: center; gap: 12px; }
+.score-letter {
+  font-family: 'Unbounded', sans-serif; font-weight: 700; font-size: 0.88rem;
+  width: 22px; text-align: center;
+}
+.score-track { flex: 1; height: 7px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; }
+.score-fill { height: 100%; border-radius: 4px; width: 0; transition: width 0.9s 0.9s cubic-bezier(0.16,1,0.3,1); }
+.score-val {
+  font-family: 'Unbounded', sans-serif; font-size: 0.78rem;
+  color: rgba(255,255,255,0.45); width: 18px; text-align: right;
+}
+
+.result-card {
+  width: 100%; background: var(--card-bg); border: 1px solid var(--card-border);
+  border-radius: 20px; padding: 24px; margin-bottom: 16px;
+  opacity: 0; animation: fadeInUp 0.6s 0.9s forwards;
+}
+.result-card-title {
+  font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.35);
+  letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 14px;
+}
+.result-card-text { font-size: 0.93rem; line-height: 1.85; color: rgba(255,255,255,0.72); }
+.traits-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.trait {
+  padding: 6px 14px; border-radius: 100px; font-size: 0.8rem; font-weight: 500;
+}
+
+.compat-grid {
+  display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 14px;
+}
+.compat-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  background: rgba(255,255,255,0.025); border-radius: 10px;
+}
+.compat-letter {
+  font-family: 'Unbounded', sans-serif; font-weight: 700; font-size: 0.85rem;
+  width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+  border-radius: 7px;
+}
+.compat-text { font-size: 0.84rem; color: rgba(255,255,255,0.55); line-height: 1.4; }
+
+.btn-restart {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 14px 32px; background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 14px;
+  color: rgba(255,255,255,0.6); font-family: inherit; font-size: 0.93rem;
+  cursor: pointer; transition: all 0.3s; opacity: 0;
+  animation: fadeIn 0.6s 1.1s forwards; margin-top: 8px;
+}
+.btn-restart:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+/* ====== PRESENTER ====== */
+.presenter-fab {
+  position: fixed; bottom: 20px; right: 20px; z-index: 100;
+  width: 46px; height: 46px; display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 13px; color: rgba(255,255,255,0.35); font-size: 1.15rem;
+  cursor: pointer; transition: all 0.3s;
+}
+.presenter-fab:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.6); }
+.presenter-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(8,8,15,0.96); backdrop-filter: blur(24px);
+  display: none; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 24px;
+}
+.presenter-overlay.open { display: flex; }
+.presenter-x {
+  position: absolute; top: 20px; right: 20px; width: 42px; height: 42px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.05); border: none; border-radius: 11px;
+  color: rgba(255,255,255,0.5); font-size: 1.4rem; cursor: pointer;
+  transition: all 0.3s;
+}
+.presenter-x:hover { background: rgba(255,255,255,0.08); }
+.presenter-inner { text-align: center; max-width: 420px; }
+.presenter-h { font-family: 'Unbounded', sans-serif; font-size: 1.3rem; font-weight: 700; margin-bottom: 8px; }
+.presenter-p { font-size: 0.88rem; color: rgba(255,255,255,0.45); margin-bottom: 28px; line-height: 1.6; }
+.qr-row { display: flex; gap: 8px; margin-bottom: 28px; }
+.qr-input {
+  flex: 1; padding: 14px 16px; background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 12px;
+  color: #e8e8f0; font-family: 'Outfit', monospace; font-size: 0.88rem;
+  outline: none; transition: border-color 0.3s;
+}
+.qr-input:focus { border-color: rgba(99,102,241,0.4); }
+.qr-input::placeholder { color: rgba(255,255,255,0.2); }
+.qr-go {
+  padding: 14px 22px; background: linear-gradient(135deg, #6366F1, #A78BFA);
+  border: none; border-radius: 12px; color: #fff; font-family: inherit;
+  font-size: 0.88rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+}
+.qr-box {
+  display: inline-flex; padding: 18px; background: #fff;
+  border-radius: 14px; margin-bottom: 12px;
+}
+.qr-hint { font-size: 0.78rem; color: rgba(255,255,255,0.25); margin-top: 10px; line-height: 1.5; }
+
+.steps-wrap {
+  display: flex; flex-direction: column; gap: 10px; margin-top: 24px; text-align: left;
+}
+.step-item {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+  background: rgba(255,255,255,0.03); border-radius: 10px;
+}
+.step-num {
+  font-family: 'Unbounded', sans-serif; font-size: 0.75rem; font-weight: 700;
+  color: rgba(99,102,241,0.7); min-width: 20px;
+}
+.step-text { font-size: 0.82rem; color: rgba(255,255,255,0.5); line-height: 1.5; }
+.step-code {
+  display: inline-block; padding: 2px 8px; background: rgba(255,255,255,0.06);
+  border-radius: 5px; font-family: 'Outfit', monospace; font-size: 0.78rem;
+  color: rgba(255,255,255,0.6);
+}
+
+/* ====== CONFETTI ====== */
+.confetti { position: fixed; z-index: 50; pointer-events: none; }
+
+/* ====== RESPONSIVE ====== */
+@media (max-width: 380px) {
+  .logo-letter { font-size: 3.2rem; }
+  .scenario-card { padding: 22px 18px; }
+  .option-btn { padding: 14px 16px; font-size: 0.87rem; }
+  .result-big-letter { font-size: 4.5rem; }
+}
+@media (min-width: 768px) {
+  .logo-letter { font-size: 5.5rem; }
+  .result-big-letter { font-size: 7rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="bg-layer"></div>
+<div class="particles" id="particles"></div>
+<div class="app" id="app"></div>
+
+<button class="presenter-fab" id="fabBtn" title="演示者模式">&#127908;</button>
+
+<div class="presenter-overlay" id="presenterPanel">
+  <button class="presenter-x" id="closePresenter">&times;</button>
+  <div class="presenter-inner">
+    <div class="presenter-h">Presenter Mode</div>
+    <div class="presenter-p">输入页面托管地址，生成二维码让观众扫码参与测试</div>
+    <div class="qr-row">
+      <input class="qr-input" id="qrUrl" placeholder="http://192.168.x.x:8080/sbti-quiz.html" />
+      <button class="qr-go" id="qrGen">生成</button>
+    </div>
+    <div id="qrOut"></div>
+    <div class="steps-wrap">
+      <div class="step-item">
+        <span class="step-num">01</span>
+        <span class="step-text">在终端进入文件所在目录，运行 <span class="step-code">python -m http.server 8080</span></span>
+      </div>
+      <div class="step-item">
+        <span class="step-num">02</span>
+        <span class="step-text">查看本机 IP（如 192.168.1.100），拼接为完整地址</span>
+      </div>
+      <div class="step-item">
+        <span class="step-num">03</span>
+        <span class="step-text">粘贴地址并生成二维码，投屏给观众扫码</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* ===== DATA ===== */
+const TYPES = {
+  S: {
+    letter:'S', name:'支持者', en:'Supporter', color:'#FF6B9D',
+    gradient:'linear-gradient(135deg,#FF6B9D,#FF8A65)',
+    glow:'rgba(255,107,157,0.15)',
+    tagline:'温暖的力量，无声的支柱',
+    icon:'&#129309;',
+    desc:'你是团队中的暖阳 —— 善于倾听、充满同理心，总能在第一时间察觉到他人的需求。你不追求聚光灯，但你的存在让每个人都感到安心。你相信真正的影响力来自于真诚的连接和默默的支持。在你身边，人们感觉被理解、被接纳、被珍视。',
+    traits:['同理心强','善于倾听','团队粘合剂','温暖可靠','冲突调和者'],
+    compat:{
+      B:'你的共情力 + 建设者的执行力 = 最温暖的高效团队',
+      T:'你们都重视细节，是值得信赖的深度搭档',
+      I:'你倾听 + 影响者表达 = 最有感染力的暖场组合'
+    }
+  },
+  B: {
+    letter:'B', name:'建设者', en:'Builder', color:'#6366F1',
+    gradient:'linear-gradient(135deg,#6366F1,#A78BFA)',
+    glow:'rgba(99,102,241,0.15)',
+    tagline:'目标明确，行动果断',
+    icon:'&#127959;&#65039;',
+    desc:'你是天生的执行者 —— 脑海中的蓝图清晰无比，行动比别人快一步。当其他人还在讨论方向时，你已经在搭建框架了。你追求效率和结果，不怕做困难的决定。你的存在让项目有了主心骨，让团队有了前进的节奏。',
+    traits:['目标导向','果断决策','执行力强','高效务实','天生领导者'],
+    compat:{
+      S:'支持者的温暖 + 你的果断 = 既有温度又有力度',
+      T:'你负责推进，思考者负责把关 = 高效引擎',
+      I:'你落地执行 + 影响者描绘愿景 = 梦想推动者'
+    }
+  },
+  T: {
+    letter:'T', name:'思考者', en:'Thinker', color:'#22D3EE',
+    gradient:'linear-gradient(135deg,#06B6D4,#22D3EE)',
+    glow:'rgba(34,211,238,0.15)',
+    tagline:'深度思考，精准洞察',
+    icon:'&#129504;',
+    desc:'你是团队的智囊 —— 永远在思考"为什么"和"怎么做更好"。你不满足于表面的答案，总是追根溯源，用逻辑和数据说话。在别人凭直觉行动时，你已经用分析框架梳理了所有可能性。你的严谨让团队少走很多弯路。',
+    traits:['逻辑严谨','善于分析','追求精确','独立思考','细节大师'],
+    compat:{
+      S:'支持者的温暖让你的分析更有温度',
+      B:'建设者推进 + 你的把关 = 又快又稳',
+      I:'影响者的创意 + 你的逻辑 = 智慧火花'
+    }
+  },
+  I: {
+    letter:'I', name:'影响者', en:'Influencer', color:'#FBBF24',
+    gradient:'linear-gradient(135deg,#F59E0B,#FBBF24)',
+    glow:'rgba(251,191,36,0.15)',
+    tagline:'点燃热情，引领方向',
+    icon:'&#10024;',
+    desc:'你是天生的舞台人物 —— 充满感染力，走到哪里就把能量带到哪里。你擅长用故事和愿景打动人心，让枯燥的事情变得有趣。你相信好的想法需要被"卖"出去，而你就是最好的推销员。在你的影响下，团队总能士气高涨。',
+    traits:['感染力强','创意丰富','善于表达','乐观热情','氛围担当'],
+    compat:{
+      S:'支持者倾听 + 你表达 = 最有温度的感染力',
+      B:'建设者落地 + 你描绘愿景 = 梦想成真',
+      T:'思考者的逻辑 + 你的创意 = 无敌智慧火花'
+    }
+  }
+};
+
+const QUESTIONS = [
+  {
+    icon:'&#128640;', title:'团队项目启动',
+    desc:'你被选为新项目的负责人，第一次团队会议上你会 ——',
+    opts:[
+      {text:'先听听每个人的想法和顾虑，确保大家都有参与感', t:'S'},
+      {text:'直接分配任务、定好时间节点，用最快速度推进', t:'B'},
+      {text:'先做市场调研和竞品分析，数据说话再做决定', t:'T'},
+      {text:'描绘项目愿景和可能性，点燃团队的激情', t:'I'}
+    ]
+  },
+  {
+    icon:'&#127908;', title:'一场重要的演讲',
+    desc:'明天要在 100 人面前做一场重要演讲，你的准备方式是 ——',
+    opts:[
+      {text:'设计一个出人意料的开场，让听众从第一秒就被吸引', t:'I'},
+      {text:'想象听众的感受，构思如何让每个人都产生共鸣', t:'S'},
+      {text:'列出核心要点，反复练习，确保内容精炼有力', t:'B'},
+      {text:'研究主题的每个细节，准备好应对所有可能的提问', t:'T'}
+    ]
+  },
+  {
+    icon:'&#9889;', title:'意见冲突',
+    desc:'会议上，你的观点和一位重要同事完全相反 ——',
+    opts:[
+      {text:'冷静分析双方论点的优劣，提出第三种方案', t:'T'},
+      {text:'直接表明立场，用事实和结果说话', t:'B'},
+      {text:'用幽默化解紧张气氛，把讨论引向积极方向', t:'I'},
+      {text:'寻找双方的共同点，引导大家达成共识', t:'S'}
+    ]
+  },
+  {
+    icon:'&#127914;', title:'组织一场活动',
+    desc:'你负责组织一场 100 人的年度聚会 ——',
+    opts:[
+      {text:'策划一个令人难忘的创意主题，让所有人发朋友圈', t:'I'},
+      {text:'制定详细计划和预算，紧盯每个执行环节不掉链子', t:'B'},
+      {text:'仔细考虑每位嘉宾的体验，确保每个人都感到被照顾', t:'S'},
+      {text:'分析往年活动数据，优化每个环节的效率和效果', t:'T'}
+    ]
+  },
+  {
+    icon:'&#127754;', title:'面临重大挑战',
+    desc:'团队遭遇了前所未有的危机，你的第一反应是 ——',
+    opts:[
+      {text:'立刻制定应急方案，果断做出关键决策', t:'B'},
+      {text:'鼓舞士气，描绘危机过后的光明前景', t:'I'},
+      {text:'深入分析问题根源，用数据找到解决路径', t:'T'},
+      {text:'关心每个人的状态，凝聚人心共渡难关', t:'S'}
+    ]
+  },
+  {
+    icon:'&#9749;', title:'周末社交',
+    desc:'周末和一群朋友聚会，你通常会 ——',
+    opts:[
+      {text:'安静地倾听每个人的近况，给出真诚的关心和建议', t:'S'},
+      {text:'成为聚会的灵魂人物，段子不断让大家笑声不停', t:'I'},
+      {text:'组织大家去做点刺激的事情，不让时间白白浪费', t:'B'},
+      {text:'分享最近发现的好书、纪录片或有趣的新知识', t:'T'}
+    ]
+  }
+];
+
+/* ===== STATE ===== */
+let S = { screen:'welcome', q:0, scores:{S:0,B:0,T:0,I:0}, ans:[] };
+const $app = document.getElementById('app');
+
+/* ===== PARTICLES ===== */
+(function initParticles(){
+  const c = document.getElementById('particles');
+  for(let i=0;i<28;i++){
+    const p = document.createElement('div');
+    p.className='particle';
+    p.style.left = Math.random()*100+'%';
+    p.style.animationDuration = (9+Math.random()*14)+'s';
+    p.style.animationDelay = Math.random()*12+'s';
+    const sz = 1+Math.random()*2;
+    p.style.width=p.style.height=sz+'px';
+    c.appendChild(p);
+  }
+})();
+
+/* ===== CONFETTI ===== */
+function boom(mainColor){
+  const palette = [mainColor,'#FF6B9D','#6366F1','#22D3EE','#FBBF24','#ffffff'];
+  for(let i=0;i<45;i++){
+    const el = document.createElement('div');
+    el.className='confetti';
+    const w = 5+Math.random()*10, h = w*(0.35+Math.random()*0.65);
+    Object.assign(el.style,{
+      width:w+'px', height:h+'px',
+      background:palette[Math.floor(Math.random()*palette.length)],
+      left:(15+Math.random()*70)+'%', top:'-12px',
+      borderRadius: Math.random()>0.5?'50%':'2px',
+    });
+    document.body.appendChild(el);
+    const ang = (-70+Math.random()*140)*Math.PI/180;
+    const dist = 280+Math.random()*480;
+    const rot = Math.random()*720;
+    el.animate([
+      {opacity:1, transform:'translateY(0) translateX(0) rotate(0deg)'},
+      {opacity:1, transform:`translateY(${dist*0.65}px) translateX(${Math.sin(ang)*180}px) rotate(${rot}deg)`, offset:0.65},
+      {opacity:0, transform:`translateY(${dist}px) translateX(${Math.sin(ang)*220}px) rotate(${rot+200}deg)`}
+    ],{
+      duration:1400+Math.random()*900,
+      delay:Math.random()*280,
+      easing:'cubic-bezier(0.22,0.61,0.36,1)',
+      fill:'forwards'
+    }).onfinish = ()=>el.remove();
+  }
+}
+
+/* ===== RENDER HELPERS ===== */
+function transition(renderFn){
+  const cur = $app.querySelector('.screen');
+  if(cur){
+    cur.classList.add('leaving');
+    cur.classList.remove('active');
+    setTimeout(renderFn,300);
+  } else renderFn();
+}
+
+function dominant(){
+  let mx=0,d='S';
+  for(const[k,v] of Object.entries(S.scores)) if(v>mx){mx=v;d=k;}
+  return d;
+}
+
+/* ===== WELCOME ===== */
+function renderWelcome(){
+  $app.innerHTML=`
+  <div class="screen active">
+    <div class="welcome-badge"><span class="dot"></span>PERSONALITY TEST</div>
+    <div class="logo-letters">
+      <span class="logo-letter">S</span><span class="logo-letter">B</span>
+      <span class="logo-letter">T</span><span class="logo-letter">I</span>
+    </div>
+    <div class="welcome-title">发现你的沟通密码</div>
+    <div class="welcome-sub">6 个真实场景，发现你独特的行为风格<br>每个选择都在勾勒你的性格画像</div>
+    <div class="type-preview">
+      <div class="type-chip s"><div class="letter">S</div><div class="label">支持者</div></div>
+      <div class="type-chip b"><div class="letter">B</div><div class="label">建设者</div></div>
+      <div class="type-chip t"><div class="letter">T</div><div class="label">思考者</div></div>
+      <div class="type-chip i"><div class="letter">I</div><div class="label">影响者</div></div>
+    </div>
+    <button class="btn-primary" onclick="startQuiz()">开始探索 <span class="arrow">&rarr;</span></button>
+  </div>`;
+}
+
+/* ===== QUIZ ===== */
+function renderQuiz(){
+  const q = QUESTIONS[S.q];
+  const pct = (S.q/QUESTIONS.length)*100;
+  $app.innerHTML=`
+  <div class="screen active">
+    <div class="progress-wrap">
+      <div class="progress-info">
+        <span class="progress-label">SCENARIO</span>
+        <span class="progress-count">${S.q+1} / ${QUESTIONS.length}</span>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="pf" style="width:${pct}%"></div></div>
+    </div>
+    <div class="scenario-card">
+      <div class="scenario-icon">${q.icon}</div>
+      <div class="scenario-title">${q.title}</div>
+      <div class="scenario-desc">${q.desc}</div>
+    </div>
+    <div class="options-list">
+      ${q.opts.map((o,i)=>`<button class="option-btn" data-t="${o.t}" data-i="${i}" onclick="pick(this)">${o.text}</button>`).join('')}
+    </div>
+  </div>`;
+  requestAnimationFrame(()=>{
+    setTimeout(()=>{
+      const f=document.getElementById('pf');
+      if(f) f.style.width=((S.q+1)/QUESTIONS.length*100)+'%';
+    },60);
+  });
+}
+
+/* ===== RESULT ===== */
+function renderResult(){
+  const d = dominant(), tp = TYPES[d], mx = QUESTIONS.length;
+  const others = ['S','B','T','I'].filter(x=>x!==d);
+  $app.innerHTML=`
+  <div class="screen active">
+    <div class="result-glow" style="background:${tp.color}"></div>
+    <div class="result-badge">
+      <div class="result-big-letter" style="background-image:${tp.gradient}">${tp.letter}</div>
+      <div class="result-name">${tp.icon} ${tp.name} &middot; ${tp.en}</div>
+      <div class="result-tagline">${tp.tagline}</div>
+    </div>
+    <div class="radar-wrap">${buildRadar(d,mx)}</div>
+    <div class="score-bars">
+      ${['S','B','T','I'].map(t=>`
+        <div class="score-row">
+          <div class="score-letter" style="color:${TYPES[t].color}">${t}</div>
+          <div class="score-track">
+            <div class="score-fill" data-target="${S.scores[t]/mx*100}" style="background:${TYPES[t].gradient}"></div>
+          </div>
+          <div class="score-val">${S.scores[t]}</div>
+        </div>`).join('')}
+    </div>
+    <div class="result-card">
+      <div class="result-card-title">YOUR PROFILE</div>
+      <div class="result-card-text">${tp.desc}</div>
+      <div class="traits-wrap">
+        ${tp.traits.map(tr=>`<span class="trait" style="background:${tp.glow};color:${tp.color};border:1px solid ${tp.color}30">${tr}</span>`).join('')}
+      </div>
+    </div>
+    <div class="result-card" style="animation-delay:1.05s">
+      <div class="result-card-title">TEAM CHEMISTRY</div>
+      <div class="compat-grid">
+        ${others.map(o=>`
+          <div class="compat-row">
+            <div class="compat-letter" style="background:${TYPES[o].glow};color:${TYPES[o].color}">${o}</div>
+            <div class="compat-text">${tp.compat[o]}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <button class="btn-restart" onclick="restart()">&#8634; 重新测试</button>
+  </div>`;
+  setTimeout(()=>{
+    document.querySelectorAll('.score-fill').forEach(b=>{b.style.width=b.dataset.target+'%';});
+  },120);
+  setTimeout(()=>boom(tp.color),380);
+}
+
+function buildRadar(d,mx){
+  const cx=120,cy=120,R=88;
+  const keys=['S','B','T','I'];
+  const ang=[Math.PI*1.5, 0, Math.PI*0.5, Math.PI]; // top,right,bottom,left
+  let grid='',axes='';
+  [.33,.66,1].forEach(s=>{
+    const r=R*s;
+    const pts=ang.map(a=>`${cx+r*Math.cos(a)},${cy+r*Math.sin(a)}`).join(' ');
+    grid+=`<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>`;
+  });
+  ang.forEach(a=>{
+    axes+=`<line x1="${cx}" y1="${cy}" x2="${cx+R*Math.cos(a)}" y2="${cy+R*Math.sin(a)}" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>`;
+  });
+  const pts=keys.map((k,i)=>{
+    const r=Math.max((S.scores[k]/mx)*R, 8);
+    return `${cx+r*Math.cos(ang[i])},${cy+r*Math.sin(ang[i])}`;
+  }).join(' ');
+  const dc=TYPES[d].color;
+  const labelPos=[
+    {x:cx,y:cy-R-14,a:'middle'},{x:cx+R+14,y:cy+5,a:'start'},
+    {x:cx,y:cy+R+20,a:'middle'},{x:cx-R-14,y:cy+5,a:'end'}
+  ];
+  let labels='';
+  keys.forEach((k,i)=>{
+    const isD=k===d;
+    labels+=`<text x="${labelPos[i].x}" y="${labelPos[i].y}" text-anchor="${labelPos[i].a}"
+      font-family="Unbounded,sans-serif" font-weight="${isD?900:400}"
+      font-size="${isD?15:12}" fill="${isD?TYPES[k].color:'rgba(255,255,255,0.35)'}">${k}</text>`;
+  });
+  const dots=keys.map((k,i)=>{
+    const r=Math.max((S.scores[k]/mx)*R,8);
+    return `<circle cx="${cx+r*Math.cos(ang[i])}" cy="${cy+r*Math.sin(ang[i])}"
+      r="4" fill="${TYPES[k].color}" opacity="0"><animate attributeName="opacity" from="0" to="1" dur="0.3s" begin="${1+i*0.1}s" fill="freeze"/></circle>`;
+  }).join('');
+  return `<svg viewBox="0 0 240 240" style="width:220px;height:220px">
+    ${grid}${axes}
+    <polygon points="${pts}" fill="${dc}18" stroke="${dc}" stroke-width="2" stroke-linejoin="round"
+      opacity="0"><animate attributeName="opacity" from="0" to="1" dur="0.7s" begin="0.7s" fill="freeze"/></polygon>
+    ${dots}${labels}
+  </svg>`;
+}
+
+/* ===== ACTIONS ===== */
+function startQuiz(){
+  S={screen:'quiz',q:0,scores:{S:0,B:0,T:0,I:0},ans:[]};
+  transition(renderQuiz);
+}
+function pick(el){
+  if(el.classList.contains('selected'))return;
+  document.querySelectorAll('.option-btn').forEach(b=>{
+    if(b!==el) b.classList.add('dimmed');
+    b.style.pointerEvents='none';
+  });
+  el.classList.add('selected');
+  const t=el.dataset.t;
+  S.scores[t]++;
+  S.ans.push(t);
+  setTimeout(()=>{
+    S.q++;
+    if(S.q>=QUESTIONS.length){S.screen='result';transition(renderResult);}
+    else transition(renderQuiz);
+  },420);
+}
+function restart(){
+  S={screen:'welcome',q:0,scores:{S:0,B:0,T:0,I:0},ans:[]};
+  transition(renderWelcome);
+}
+
+/* ===== PRESENTER ===== */
+document.getElementById('fabBtn').onclick=()=>document.getElementById('presenterPanel').classList.add('open');
+document.getElementById('closePresenter').onclick=()=>document.getElementById('presenterPanel').classList.remove('open');
+document.getElementById('qrGen').onclick=()=>{
+  const url=document.getElementById('qrUrl').value.trim();
+  if(!url)return;
+  const out=document.getElementById('qrOut');
+  out.innerHTML='<div class="qr-box"><div id="qrCanvas"></div></div>';
+  try{
+    new QRCode(document.getElementById('qrCanvas'),{
+      text:url,width:180,height:180,
+      colorDark:'#08080f',colorLight:'#ffffff',
+      correctLevel:QRCode.CorrectLevel.H
+    });
+  }catch(e){out.innerHTML='<div style="color:rgba(255,255,255,0.4);padding:16px">生成失败，请检查链接</div>';}
+};
+
+/* ===== INIT ===== */
+renderWelcome();
+</script>
+</body>
+</html>

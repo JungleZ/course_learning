@@ -70,10 +70,11 @@ def send_message():
 
 @messages_bp.route('/<int:user_id>', methods=['GET'])
 def get_messages(user_id):
+    """获取与指定用户的聊天记录"""
     current_user_id = verify_token(request)
     if not current_user_id:
         return jsonify({'error': '未登录'}), 401;
-
+    
     conn = get_db()
     messages = conn.execute('''SELECT m.*, 
                              u1.username as sender_name,
@@ -86,7 +87,7 @@ def get_messages(user_id):
                       ORDER BY m.created_at''',
                      (current_user_id, user_id, user_id, current_user_id)).fetchall()
     conn.close()
-
+    
     result = []
     for msg in messages:
         result.append({
@@ -99,7 +100,7 @@ def get_messages(user_id):
             'sentiment_score': msg['sentiment_score'],
             'created_at': msg['created_at']
         })
-
+    
     return jsonify({'messages': result})
 
 
