@@ -1,0 +1,2427 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>心动交友</title>
+    <style>
+        * {
+            margin:0;
+            padding:0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 420px;
+            height: 85vh;
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen {
+            display: none;
+            flex: 1;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 18px 20px;
+            text-align: center;
+            font-size: 18px;
+            font-weight: bold;
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .header-right {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .back-btn {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .content-with-nav {
+            padding-bottom: 0;
+        }
+
+        /* Bottom Tab Navigation */
+        .tab-nav {
+            display: none;
+            background: white;
+            border-top: 1px solid #eee;
+            padding: 8px 0 12px;
+            flex-shrink: 0;
+        }
+
+        .tab-nav.visible {
+            display: flex;
+        }
+
+        .tab-nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            color: #999;
+            font-size: 11px;
+            transition: color 0.2s;
+            position: relative;
+        }
+
+        .tab-nav-item.active {
+            color: #667eea;
+        }
+
+        .tab-nav-item .tab-icon {
+            font-size: 22px;
+            line-height: 1;
+        }
+
+        .tab-nav-item .tab-badge {
+            position: absolute;
+            top: -2px;
+            right: calc(50% - 18px);
+            background: #dc3545;
+            color: white;
+            font-size: 10px;
+            min-width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 4px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            color: #666;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .toggle-link {
+            text-align: center;
+            margin-top: 15px;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .error {
+            background: #fee;
+            color: #c00;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .error.active {
+            display: block;
+        }
+
+        .toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-100px);
+            background: #333;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            z-index: 9999;
+            transition: transform 0.3s ease;
+            max-width: 300px;
+            text-align: center;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast.success {
+            background: #28a745;
+        }
+
+        .toast.error {
+            background: #dc3545;
+        }
+
+        .user-card {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .user-card:hover {
+            transform: translateX(3px);
+        }
+
+        .user-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .user-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .user-avatar-sm {
+            width: 48px;
+            height: 48px;
+            font-size: 20px;
+        }
+
+        .user-avatar-lg {
+            width: 80px;
+            height: 80px;
+            font-size: 32px;
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .user-bio {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .match-score {
+            font-size: 12px;
+            color: #667eea;
+            font-weight: 500;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .btn-like {
+            flex: 1;
+            padding: 10px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+
+        .btn-like:active {
+            opacity: 0.8;
+        }
+
+        .btn-skip {
+            flex: 1;
+            padding: 10px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .match-card {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .match-emoji {
+            font-size: 50px;
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Chat */
+        .message-input-area {
+            padding: 12px 15px;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 10px;
+            flex-shrink: 0;
+            background: white;
+        }
+
+        .message-input-area input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 15px;
+        }
+
+        .message-input-area input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .message-input-area button {
+            padding: 10px 18px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+
+        .message-bubble {
+            padding: 10px 14px;
+            margin-bottom: 10px;
+            border-radius: 16px;
+            max-width: 78%;
+            word-wrap: break-word;
+        }
+
+        .message-bubble.sent {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-bubble.received {
+            background: #f0f0f0;
+            color: #333;
+            margin-right: auto;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-text {
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.6;
+            margin-top: 4px;
+        }
+
+        .sentiment-badge {
+            font-size: 11px;
+            margin-top: 4px;
+            display: flex;
+            gap: 5px;
+        }
+
+        .badge-positive {
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .badge-negative {
+            background: #dc3545;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        .badge-neutral {
+            background: #6c757d;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+        }
+
+        /* Profile Page */
+        .profile-header {
+            text-align: center;
+            padding: 20px 0 0;
+        }
+
+        .profile-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+        }
+
+        .profile-stat {
+            text-align: center;
+        }
+
+        .profile-stat-num {
+            font-size: 22px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .profile-stat-label {
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* Like/Visitor stats bar */
+        .stats-bar {
+            display: flex;
+            justify-content: space-around;
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 14px 10px;
+            margin: 12px 0;
+        }
+
+        .stats-bar-item {
+            text-align: center;
+            cursor: pointer;
+            flex: 1;
+            position: relative;
+            transition: transform 0.15s;
+        }
+
+        .stats-bar-item:active {
+            transform: scale(0.95);
+        }
+
+        .stats-bar-num {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            line-height: 1.2;
+        }
+
+        .stats-bar-num.liked-me { color: #e74c3c; }
+        .stats-bar-num.i-liked { color: #667eea; }
+        .stats-bar-num.visitors { color: #f39c12; }
+
+        .stats-bar-label {
+            font-size: 11px;
+            color: #999;
+            margin-top: 2px;
+        }
+
+        .stats-bar-divider {
+            width: 1px;
+            background: #e0e0e0;
+            margin: 2px 0;
+        }
+
+        /* Edit button on avatar */
+        .avatar-edit-btn {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            background: #667eea;
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+            z-index: 2;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            transition: background 0.2s;
+        }
+
+        .avatar-edit-btn:hover {
+            background: #764ba2;
+        }
+
+        .profile-menu-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .profile-menu-item:hover {
+            background: #f8f9ff;
+        }
+
+        .profile-menu-icon {
+            font-size: 20px;
+            margin-right: 12px;
+            width: 28px;
+            text-align: center;
+        }
+
+        .profile-menu-text {
+            flex: 1;
+            color: #333;
+            font-size: 15px;
+        }
+
+        .profile-menu-arrow {
+            color: #ccc;
+            font-size: 14px;
+        }
+
+        .profile-avatar-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .profile-avatar-edit {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            background: #667eea;
+            color: white;
+            border: 2px solid white;
+            border-radius: 50%;
+            width: 26px;
+            height: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .avatar-upload-input {
+            display: none;
+        }
+
+        /* Interest tags */
+        .interest-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .interest-tag {
+            background: #f0f3ff;
+            color: #667eea;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+        }
+
+        /* Edit profile form */
+        .edit-avatar-area {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+        }
+
+        /* Profile detail sections */
+        .profile-section {
+            margin-top: 12px;
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+
+        .profile-section-title {
+            font-size: 13px;
+            color: #999;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .profile-section-body {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .profile-section-body.empty {
+            color: #bbb;
+            font-style: italic;
+        }
+
+        .verify-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+            justify-content: center;
+        }
+
+        .verify-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            background: #f0f0f0;
+            color: #999;
+        }
+
+        .verify-badge.verified {
+            background: #e8f5e9;
+            color: #28a745;
+        }
+
+        .mbti-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 3px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .form-section-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #667eea;
+            margin: 18px 0 10px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #f0f3ff;
+        }
+
+        .form-section-title:first-child {
+            margin-top: 0;
+        }
+
+        .chat-list-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            gap: 12px;
+        }
+
+        .chat-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .chat-list-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .chat-list-name {
+            font-weight: 600;
+            font-size: 15px;
+            color: #333;
+        }
+
+        .chat-list-preview {
+            font-size: 13px;
+            color: #999;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            margin-top: 2px;
+        }
+
+        .chat-list-time {
+            font-size: 11px;
+            color: #bbb;
+            flex-shrink: 0;
+        }
+
+        .chat-unread-dot {
+            width: 8px;
+            height: 8px;
+            background: #dc3545;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* ===== Swipe Card (Tinder-style) ===== */
+        .swipe-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .swipe-card {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.4s ease, opacity 0.4s ease;
+            will-change: transform, opacity;
+        }
+
+        .swipe-card.animate-left {
+            transform: translateX(-120%);
+            opacity: 0;
+        }
+
+        .swipe-card.animate-right {
+            transform: translateX(120%);
+            opacity: 0;
+        }
+
+        .swipe-card-top {
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+            padding: 24px 20px 18px;
+            position: relative;
+        }
+
+        .swipe-card-top .swipe-avatar {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            background: rgba(255,255,255,0.25);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: bold;
+            overflow: hidden;
+            border: 3px solid rgba(255,255,255,0.6);
+        }
+
+        .swipe-card-top .swipe-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .swipe-card-top .swipe-name {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .swipe-card-top .swipe-meta {
+            font-size: 13px;
+            opacity: 0.85;
+        }
+
+        .swipe-card-top .swipe-score {
+            position: absolute;
+            top: 12px;
+            right: 16px;
+            background: rgba(255,255,255,0.2);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .swipe-card-top .swipe-mbti {
+            position: absolute;
+            top: 12px;
+            left: 16px;
+            background: rgba(255,255,255,0.2);
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .swipe-card-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 14px 18px;
+            background: white;
+        }
+
+        .swipe-card-body .s-tag {
+            display: inline-block;
+            background: #f0f3ff;
+            color: #667eea;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin: 2px 4px 2px 0;
+        }
+
+        .swipe-card-body .s-tag.verified {
+            background: #e8f5e9;
+            color: #28a745;
+        }
+
+        .swipe-card-body .s-section {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .swipe-card-body .s-section-title {
+            font-size: 12px;
+            color: #aaa;
+            margin-bottom: 3px;
+        }
+
+        .swipe-actions {
+            flex-shrink: 0;
+            display: flex;
+            gap: 12px;
+            padding: 14px 20px;
+            background: white;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .swipe-actions .swipe-btn {
+            flex: 1;
+            padding: 14px 0;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: transform 0.15s, opacity 0.15s;
+        }
+
+        .swipe-actions .swipe-btn:active {
+            transform: scale(0.96);
+        }
+
+        .swipe-actions .btn-pass {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .swipe-actions .btn-super {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            flex: 0.6;
+        }
+
+        .swipe-actions .btn-heart {
+            background: linear-gradient(135deg, #e74c3c 0%, #ff6b6b 100%);
+            color: white;
+        }
+
+        .swipe-actions .btn-greet {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .swipe-counter {
+            text-align: center;
+            padding: 8px 0 0;
+            font-size: 12px;
+            color: #bbb;
+        }
+    </style>
+</head>
+<body>
+    <div id="toast" class="toast"></div>
+
+    <div class="app-container">
+        <!-- Login -->
+        <div class="screen active" id="loginScreen">
+            <div class="header">心动交友</div>
+            <div class="content">
+                <div class="error" id="loginError"></div>
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="loginUsername" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="loginPassword" placeholder="请输入密码">
+                </div>
+                <button class="btn" onclick="login()">登录</button>
+                <div class="toggle-link" onclick="showScreen('registerScreen')">没有账号？立即注册</div>
+            </div>
+        </div>
+
+        <!-- Register -->
+        <div class="screen" id="registerScreen">
+            <div class="header">
+                <span class="back-btn" onclick="showScreen('loginScreen')">&larr;</span>
+                注册账号
+            </div>
+            <div class="content">
+                <div class="error" id="registerError"></div>
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="regUsername" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label>邮箱</label>
+                    <input type="email" id="regEmail" placeholder="请输入邮箱">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="regPassword" placeholder="至少6位密码">
+                </div>
+                <button class="btn" onclick="register()">注册</button>
+                <div class="toggle-link" onclick="showScreen('loginScreen')">已有账号？立即登录</div>
+            </div>
+        </div>
+
+        <!-- Recommend (Tab 1) -->
+        <div class="screen" id="recommendScreen">
+            <div class="header">推荐匹配</div>
+            <div class="swipe-area" id="swipeArea">
+                <div class="loading"><div class="spinner"></div><p>加载推荐中...</p></div>
+            </div>
+        </div>
+
+        <!-- Messages (Tab 2) -->
+        <div class="screen" id="messageListScreen">
+            <div class="header">消息</div>
+            <div class="content content-with-nav" id="messageListContent">
+                <div class="loading"><div class="spinner"></div><p>加载中...</p></div>
+            </div>
+        </div>
+
+        <!-- Chat -->
+        <div class="screen" id="chatScreen">
+            <div class="header">
+                <span class="back-btn" onclick="goBackFromChat()">&larr;</span>
+                <span id="chatUserName"></span>
+            </div>
+            <div class="content" id="chatMessages" style="padding:12px 15px;"></div>
+            <div class="message-input-area">
+                <input type="text" id="messageInput" placeholder="输入消息..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button onclick="sendMessage()">发送</button>
+            </div>
+        </div>
+
+        <!-- Profile / Me (Tab 3) -->
+        <div class="screen" id="profileScreen">
+            <div class="header">我的</div>
+            <div class="content content-with-nav" id="profileContent">
+                <div class="loading"><div class="spinner"></div><p>加载中...</p></div>
+            </div>
+        </div>
+
+        <!-- Edit Profile -->
+        <div class="screen" id="editProfileScreen">
+            <div class="header">
+                <span class="back-btn" onclick="showScreen('profileScreen'); loadProfile();">&larr;</span>
+                编辑资料
+            </div>
+            <div class="content" id="editProfileContent"></div>
+        </div>
+
+        <!-- View Other User Profile -->
+        <div class="screen" id="viewProfileScreen">
+            <div class="header">
+                <span class="back-btn" id="viewProfileBack">&larr;</span>
+                <span id="viewProfileTitle">个人主页</span>
+            </div>
+            <div class="content" id="viewProfileContent"></div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tab-nav" id="tabNav">
+            <div class="tab-nav-item active" onclick="switchTab('recommendScreen')" data-tab="recommendScreen">
+                <span class="tab-icon">&#x1f525;</span>
+                <span>推荐</span>
+            </div>
+            <div class="tab-nav-item" onclick="switchTab('messageListScreen')" data-tab="messageListScreen">
+                <span class="tab-icon">&#x1f4ac;</span>
+                <span>消息</span>
+                <span class="tab-badge" id="msgBadge" style="display:none;">0</span>
+            </div>
+            <div class="tab-nav-item" onclick="switchTab('profileScreen')" data-tab="profileScreen">
+                <span class="tab-icon">&#x1f464;</span>
+                <span>我的</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let token = localStorage.getItem('token');
+        let currentUser = null;
+        let currentChatUserId = null;
+        let previousScreen = 'messageListScreen';
+        let chatPollingTimer = null;
+
+        const API_BASE = 'http://localhost:5052';
+
+        // ===== Init =====
+        if (token) {
+            verifyToken();
+        }
+
+        // ===== Toast =====
+        function showToast(message, type = '') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast ' + type;
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        function showError(elementId, message) {
+            const error = document.getElementById(elementId);
+            error.textContent = message;
+            error.classList.add('active');
+            setTimeout(() => error.classList.remove('active'), 3000);
+        }
+
+        // ===== Navigation =====
+        function showScreen(screenId) {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+
+            const isTabScreen = ['recommendScreen', 'messageListScreen', 'profileScreen'].includes(screenId);
+            document.getElementById('tabNav').classList.toggle('visible', isTabScreen);
+
+            document.getElementById(screenId).classList.add('active');
+
+            // Update tab active state
+            document.querySelectorAll('.tab-nav-item').forEach(t => {
+                t.classList.toggle('active', t.dataset.tab === screenId);
+            });
+
+            // Trigger data loads
+            if (screenId === 'recommendScreen') loadRecommendations(false);
+            else if (screenId === 'messageListScreen') loadConversations();
+            else if (screenId === 'profileScreen') loadProfile();
+
+            // Stop chat polling when leaving chat
+            if (screenId !== 'chatScreen' && chatPollingTimer) {
+                clearInterval(chatPollingTimer);
+                chatPollingTimer = null;
+            }
+        }
+
+        function switchTab(screenId) {
+            showScreen(screenId);
+        }
+
+        function goBackFromChat() {
+            if (chatPollingTimer) {
+                clearInterval(chatPollingTimer);
+                chatPollingTimer = null;
+            }
+            showScreen(previousScreen);
+        }
+
+        // ===== Auth =====
+        async function register() {
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+
+            if (!username || !email || !password) {
+                showError('registerError', '请填写所有字段');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, email, password})
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showToast('注册成功！请登录', 'success');
+                    showScreen('loginScreen');
+                } else {
+                    showError('registerError', data.error);
+                }
+            } catch (error) {
+                showError('registerError', '请求失败');
+            }
+        }
+
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!username || !password) {
+                showError('loginError', '请填写用户名和密码');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, password})
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    token = data.token;
+                    currentUser = data.user;
+                    localStorage.setItem('token', token);
+                    showToast('登录成功！', 'success');
+                    showScreen('recommendScreen');
+                } else {
+                    showError('loginError', data.error);
+                }
+            } catch (error) {
+                showError('loginError', '请求失败');
+            }
+        }
+
+        async function verifyToken() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/verify`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    currentUser = data.user;
+                    showScreen('recommendScreen');
+                } else {
+                    logout();
+                }
+            } catch (error) {
+                logout();
+            }
+        }
+
+        function logout() {
+            token = null;
+            currentUser = null;
+            currentChatUserId = null;
+            localStorage.removeItem('token');
+            if (chatPollingTimer) {
+                clearInterval(chatPollingTimer);
+                chatPollingTimer = null;
+            }
+            showScreen('loginScreen');
+        }
+
+        // ===== Recommendations (Swipe Cards) =====
+        let recUsers = [];
+        let recIndex = 0;
+        let swipeStartX = 0;
+        let isAnimating = false;
+        let isDragging = false;
+        let recLoaded = false;
+
+        async function loadRecommendations(forceReload) {
+            if (!forceReload && recLoaded && recUsers.length > 0) {
+                renderCurrentCard();
+                return;
+            }
+            const area = document.getElementById('swipeArea');
+            area.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载推荐中...</p></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/match/recommendations`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const data = await response.json();
+
+                if (data.recommendations && data.recommendations.length > 0) {
+                    recUsers = data.recommendations;
+                    recIndex = 0;
+                    recLoaded = true;
+                    renderCurrentCard();
+                } else {
+                    area.innerHTML = `
+                        <div class="empty-state" style="display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1;">
+                            <div class="empty-state-icon">&#x1f50d;</div>
+                            <p>暂无推荐用户</p>
+                            <p style="font-size:13px; margin-top:8px;">等更多人加入吧！</p>
+                        </div>`;
+                }
+            } catch (error) {
+                area.innerHTML = '<p style="text-align:center; color:#c00;">加载失败</p>';
+            }
+        }
+
+        function renderCurrentCard() {
+            // 清理上一次的鼠标事件监听
+            document.removeEventListener('mousemove', swipeMouseMove);
+            document.removeEventListener('mouseup', swipeMouseUp);
+
+            const area = document.getElementById('swipeArea');
+            if (recIndex >= recUsers.length) {
+                area.innerHTML = `
+                    <div class="empty-state" style="display:flex; flex-direction:column; justify-content:center; align-items:center; flex:1;">
+                        <div class="empty-state-icon">&#x1f389;</div>
+                        <p>今日推荐已看完</p>
+                        <button class="btn" style="max-width:200px; margin:16px auto 0;" onclick="loadRecommendations(true)">&#x1f504; 重新推荐</button>
+                    </div>`;
+                return;
+            }
+
+            const rec = recUsers[recIndex];
+            const u = rec.user;
+            const score = (rec.compatibility_score * 100).toFixed(0);
+            const liked = rec.already_liked;
+            const interests = parseInterests(u.interests);
+
+            area.innerHTML = `
+                <div class="swipe-card" id="currentSwipeCard"
+                     ontouchstart="swipeTouchStart(event)" ontouchend="swipeTouchEnd(event)"
+                     ontouchmove="swipeTouchMove(event)"
+                     onmousedown="swipeMouseDown(event)">
+                    <div class="swipe-card-top">
+                        <div class="swipe-score">${score}% 匹配</div>
+                        ${u.mbti ? `<div class="swipe-mbti">${escapeHtml(u.mbti)}</div>` : ''}
+                        <div class="swipe-avatar">
+                            ${u.avatar_url
+                                ? `<img src="${API_BASE}/api/upload/avatar/${u.avatar_url}" onerror="this.parentNode.textContent='${u.username[0].toUpperCase()}'">`
+                                : u.username[0].toUpperCase()}
+                        </div>
+                        <div class="swipe-name">${u.username} ${liked ? '<span style="font-size:14px;">&#x2764; 已喜欢</span>' : ''}</div>
+                        <div class="swipe-meta">${u.gender || ''} ${u.location ? '· ' + u.location : ''} ${u.marital_status ? '· ' + u.marital_status : ''}</div>
+                        ${u.dating_goal ? `<div style="margin-top:6px; font-size:12px; opacity:0.8;">&#x1f49d; ${escapeHtml(u.dating_goal)}</div>` : ''}
+                    </div>
+                    <div class="swipe-card-body" id="swipeCardBody">
+                        <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                            ${(u.real_name_verified ? '<span class="s-tag verified">&#x2705; 实名认证</span>' : '') +
+                              (u.avatar_verified ? '<span class="s-tag verified">&#x2705; 头像认证</span>' : '') +
+                              (u.marital_status_verified ? '<span class="s-tag verified">&#x2705; 婚况认证</span>' : '')}
+                        </div>
+                        ${interests.length > 0 ? `<div style="display:flex; flex-wrap:wrap; margin-top:8px;">${interests.map(i => `<span class="s-tag">${i}</span>`).join('')}</div>` : ''}
+                        ${u.about_me ? `<div class="s-section"><div class="s-section-title">关于我</div>${escapeHtml(u.about_me)}</div>` : ''}
+                        ${u.know_me ? `<div class="s-section"><div class="s-section-title">希望 ta 了解这样的我</div>${escapeHtml(u.know_me)}</div>` : ''}
+                        ${u.ideal_type ? `<div class="s-section"><div class="s-section-title">我的理想型</div>${escapeHtml(u.ideal_type)}</div>` : ''}
+                        ${u.free_time_hobbies ? `<div class="s-section"><div class="s-section-title">空闲时间喜欢做什么</div>${escapeHtml(u.free_time_hobbies)}</div>` : ''}
+                        ${u.love_vision ? `<div class="s-section"><div class="s-section-title">向往的恋爱</div>${escapeHtml(u.love_vision)}</div>` : ''}
+                        ${u.meeting_preference ? `<div class="s-section"><div class="s-section-title">见面偏好</div>${escapeHtml(u.meeting_preference)}</div>` : ''}
+                    </div>
+                    <div class="swipe-counter">${recIndex + 1} / ${recUsers.length}</div>
+                    <div class="swipe-actions">
+                        ${liked
+                            ? `<button class="swipe-btn btn-super" onclick="animateAndNext('right')">&#x27a1; 下一个</button>`
+                            : `<button class="swipe-btn btn-pass" onclick="passCard()">&#x2b05; 跳过</button>
+                               <button class="swipe-btn btn-greet" onclick="greetCurrentCard()">&#x1f4ac; 打招呼</button>
+                               <button class="swipe-btn btn-heart" onclick="likeCurrentCard()">&#x2764; 喜欢</button>`
+                        }
+                    </div>
+                </div>
+            `;
+            isAnimating = false;
+        }
+
+        // Touch events
+        function swipeTouchStart(e) {
+            swipeStartX = e.touches[0].clientX;
+        }
+
+        function swipeTouchMove(e) {
+            if (isAnimating) return;
+            const card = document.getElementById('currentSwipeCard');
+            if (!card) return;
+            const dx = e.touches[0].clientX - swipeStartX;
+            card.style.transition = 'none';
+            card.style.transform = `translateX(${dx}px)`;
+            card.style.opacity = 1 - Math.abs(dx) / 500;
+        }
+
+        function swipeTouchEnd(e) {
+            if (isAnimating) return;
+            const card = document.getElementById('currentSwipeCard');
+            if (!card) return;
+            const dx = e.changedTouches[0].clientX - swipeStartX;
+            card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+
+            if (Math.abs(dx) > 80) {
+                if (dx > 0) likeCurrentCard();
+                else passCard();
+            } else {
+                card.style.transform = 'translateX(0)';
+                card.style.opacity = 1;
+            }
+        }
+
+        // Mouse events (desktop drag)
+        function swipeMouseDown(e) {
+            if (isAnimating) return;
+            isDragging = false;
+            swipeStartX = e.clientX;
+            document.addEventListener('mousemove', swipeMouseMove);
+            document.addEventListener('mouseup', swipeMouseUp);
+            e.preventDefault();
+        }
+
+        function swipeMouseMove(e) {
+            if (isAnimating) return;
+            const card = document.getElementById('currentSwipeCard');
+            if (!card) return;
+            const dx = e.clientX - swipeStartX;
+            if (Math.abs(dx) > 5) isDragging = true;
+            if (!isDragging) return;
+            card.style.transition = 'none';
+            card.style.transform = `translateX(${dx}px)`;
+            card.style.opacity = 1 - Math.abs(dx) / 500;
+        }
+
+        function swipeMouseUp(e) {
+            document.removeEventListener('mousemove', swipeMouseMove);
+            document.removeEventListener('mouseup', swipeMouseUp);
+            if (isAnimating || !isDragging) return;
+            const card = document.getElementById('currentSwipeCard');
+            if (!card) return;
+            const dx = e.clientX - swipeStartX;
+            card.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+
+            if (Math.abs(dx) > 80) {
+                if (dx > 0) likeCurrentCard();
+                else passCard();
+            } else {
+                card.style.transform = 'translateX(0)';
+                card.style.opacity = 1;
+            }
+            isDragging = false;
+        }
+
+        async function likeCurrentCard() {
+            if (isAnimating || recIndex >= recUsers.length) return;
+            isAnimating = true;
+            const card = document.getElementById('currentSwipeCard');
+            const u = recUsers[recIndex].user;
+
+            if (recUsers[recIndex].already_liked) {
+                animateAndNext('right');
+                return;
+            }
+
+            card.style.transition = 'transform 0.4s ease, opacity 0.4s ease';
+            card.style.transform = 'translateX(120%)';
+            card.style.opacity = '0';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/match/like/${u.id}`, {
+                    method: 'POST',
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const data = await response.json();
+                if (data.matched) {
+                    showToast('&#x1f389; 匹配成功！', 'success');
+                    // 自动跳转到聊天窗口
+                    recIndex++;
+                    openChatFromRecommend(u.id, u.username);
+                    return;
+                } else {
+                    showToast('已发送喜欢 &#x2764;', 'success');
+                }
+            } catch (error) {
+                showToast('请求失败', 'error');
+            }
+
+            setTimeout(() => {
+                recIndex++;
+                renderCurrentCard();
+            }, 350);
+        }
+
+        async function greetCurrentCard() {
+            if (isAnimating || recIndex >= recUsers.length) return;
+            const u = recUsers[recIndex].user;
+            const greetings = [
+                '你好呀，想认识一下~',
+                '嗨，觉得你不错，来打个招呼！',
+                '你好，缘分让我们相遇~',
+                '哈喽~看你资料觉得很有缘！'
+            ];
+            const msg = greetings[Math.floor(Math.random() * greetings.length)];
+
+            try {
+                const r = await fetch(`${API_BASE}/api/messages/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ receiver_id: u.id, content: msg })
+                });
+                if (r.ok) {
+                    showToast('&#x1f44b; 打招呼成功！', 'success');
+                } else {
+                    showToast('打招呼失败', 'error');
+                }
+            } catch (e) {
+                showToast('请求失败', 'error');
+            }
+        }
+
+        function openChatFromRecommend(userId, username) {
+            previousScreen = 'recommendScreen';
+            currentChatUserId = userId;
+            document.getElementById('chatUserName').textContent = username;
+            document.getElementById('chatMessages').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            document.getElementById('messageInput').value = '';
+            showScreen('chatScreen');
+            loadChatHistory(userId);
+        }
+
+        function passCard() {
+            if (isAnimating || recIndex >= recUsers.length) return;
+            animateAndNext('left');
+        }
+
+        function animateAndNext(direction) {
+            isAnimating = true;
+            const card = document.getElementById('currentSwipeCard');
+            if (!card) return;
+            card.style.transition = 'transform 0.35s ease, opacity 0.35s ease';
+            card.style.transform = direction === 'left' ? 'translateX(-120%)' : 'translateX(120%)';
+            card.style.opacity = '0';
+            setTimeout(() => {
+                recIndex++;
+                renderCurrentCard();
+            }, 300);
+        }
+
+        async function likeUser(userId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/match/like/${userId}`, {
+                    method: 'POST',
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.matched) {
+                        showToast('&#x1f389; 你们互相喜欢了！', 'success');
+                    } else {
+                        showToast('已发送喜欢 &#x2764;', 'success');
+                    }
+                    // Update button state if on viewProfile screen
+                    const container = document.getElementById('viewProfileContent');
+                    const btn = container.querySelector('.btn-success');
+                    if (btn && !data.matched) {
+                        btn.className = 'btn btn-secondary';
+                        btn.disabled = true;
+                        btn.innerHTML = '&#x2764; 已喜欢';
+                    }
+                } else {
+                    showToast(data.error || '操作失败', 'error');
+                }
+            } catch (error) {
+                showToast('请求失败', 'error');
+            }
+        }
+
+        // ===== Matches =====
+        async function loadMatches() {
+            const list = document.getElementById('matchesList');
+            list.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
+            document.getElementById('matchBadge').style.display = 'none';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/match/matches`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const data = await response.json();
+
+                if (data.matches && data.matches.length > 0) {
+                    list.innerHTML = '';
+                    data.matches.forEach(match => {
+                        const user = match.user;
+                        const score = (match.compatibility_score * 100).toFixed(0);
+                        const item = document.createElement('div');
+                        item.className = 'chat-list-item';
+                        item.onclick = () => openChat(match.match_id, user);
+                        item.innerHTML = `
+                            <div class="user-avatar user-avatar-sm">
+                                ${user.avatar_url
+                                    ? `<img src="${API_BASE}/api/upload/avatar/${user.avatar_url}" onerror="this.parentNode.textContent='${user.username[0].toUpperCase()}'">`
+                                    : user.username[0].toUpperCase()}
+                            </div>
+                            <div class="chat-list-info">
+                                <div class="chat-list-name">${user.username}</div>
+                                <div class="chat-list-preview">匹配度 ${score}% · 点击发消息</div>
+                            </div>
+                            <span style="color:#ccc;">&gt;</span>
+                        `;
+                        list.appendChild(item);
+                    });
+                } else {
+                    list.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">&#x1f495;</div>
+                            <p>暂无匹配</p>
+                            <p style="font-size:13px; margin-top:8px;">去推荐页面喜欢更多人吧！</p>
+                        </div>`;
+                }
+            } catch (error) {
+                list.innerHTML = '<p style="text-align:center; color:#c00;">加载失败</p>';
+            }
+        }
+
+        // ===== Conversations (Message List Tab) =====
+        async function loadConversations() {
+            const container = document.getElementById('messageListContent');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
+
+            try {
+                const r = await fetch(`${API_BASE}/api/messages/conversations`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const data = await r.json();
+
+                if (data.conversations && data.conversations.length > 0) {
+                    container.innerHTML = data.conversations.map(c => {
+                        const preview = c.last_message
+                            ? (c.last_sender_id === currentUser.id ? '我: ' : '') + c.last_message
+                            : '暂无消息，开始聊天吧';
+                        const time = c.last_time ? timeAgo(c.last_time) : '';
+                        return `<div class="chat-list-item" onclick="openChatFromMsg(${c.id}, '${escapeAttr(c.username)}')">
+                            <div class="user-avatar user-avatar-sm">
+                                ${c.avatar_url
+                                    ? `<img src="${API_BASE}/api/upload/avatar/${c.avatar_url}" onerror="this.parentNode.textContent='${c.username[0].toUpperCase()}'">`
+                                    : c.username[0].toUpperCase()}
+                            </div>
+                            <div class="chat-list-info">
+                                <div class="chat-list-name">${c.username}</div>
+                                <div class="chat-list-preview">${escapeHtml(preview)}</div>
+                            </div>
+                            <span class="chat-list-time">${time}</span>
+                        </div>`;
+                    }).join('');
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state-icon">&#x1f4ac;</div>
+                            <p>暂无消息</p>
+                            <p style="font-size:13px; margin-top:8px;">互相匹配后即可开始聊天</p>
+                        </div>`;
+                }
+            } catch (e) {
+                container.innerHTML = '<p style="text-align:center; color:#c00;">加载失败</p>';
+            }
+        }
+
+        function openChatFromMsg(userId, username) {
+            previousScreen = 'messageListScreen';
+            currentChatUserId = userId;
+            document.getElementById('chatUserName').textContent = username;
+            document.getElementById('chatMessages').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            document.getElementById('messageInput').value = '';
+            showScreen('chatScreen');
+            loadChatHistory(userId);
+        }
+
+        // ===== Chat (connected to backend) =====
+        function openChat(userId, userObj) {
+            previousScreen = 'messageListScreen';
+            currentChatUserId = userId;
+
+            const username = userObj.username || '用户';
+            document.getElementById('chatUserName').textContent = username;
+            document.getElementById('chatMessages').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            document.getElementById('messageInput').value = '';
+
+            showScreen('chatScreen');
+            loadChatHistory(userId);
+        }
+
+        async function loadChatHistory(userId) {
+            const container = document.getElementById('chatMessages');
+            try {
+                const response = await fetch(`${API_BASE}/api/messages/${userId}`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const data = await response.json();
+
+                container.innerHTML = '';
+
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        appendMessageBubble(msg);
+                    });
+                    scrollToBottom();
+                } else {
+                    container.innerHTML = `
+                        <div class="empty-state" style="padding:30px 10px;">
+                            <div class="empty-state-icon" style="font-size:36px;">&#x1f4ac;</div>
+                            <p>开始聊天吧！</p>
+                        </div>`;
+                }
+            } catch (error) {
+                container.innerHTML = '<p style="text-align:center; color:#c00;">加载消息失败</p>';
+            }
+        }
+
+        function appendMessageBubble(msg) {
+            const container = document.getElementById('chatMessages');
+            const isSent = String(msg.sender_id) === String(currentUser.id);
+            const div = document.createElement('div');
+            div.className = `message-bubble ${isSent ? 'sent' : 'received'}`;
+
+            let sentimentHtml = '';
+            if (msg.sentiment_score !== null && msg.sentiment_score !== undefined) {
+                const score = parseFloat(msg.sentiment_score);
+                if (score > 0.6) {
+                    sentimentHtml = '<span class="badge-positive">&#x1f60a; 积极</span>';
+                } else if (score < 0.4) {
+                    sentimentHtml = '<span class="badge-negative">&#x1f614; 消极</span>';
+                } else {
+                    sentimentHtml = '<span class="badge-neutral">&#x1f610; 中性</span>';
+                }
+            }
+
+            const time = msg.created_at ? new Date(msg.created_at).toLocaleTimeString('zh-CN', {hour:'2-digit', minute:'2-digit'}) : '';
+
+            div.innerHTML = `
+                <div class="message-text">${escapeHtml(msg.content)}</div>
+                <div class="message-time">${time}</div>
+                <div class="sentiment-badge">${sentimentHtml}</div>
+            `;
+            container.appendChild(div);
+        }
+
+        async function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const content = input.value.trim();
+
+            if (!content || !currentChatUserId) return;
+
+            input.value = '';
+            input.disabled = true;
+
+            // Show optimistic message
+            const container = document.getElementById('chatMessages');
+            const div = document.createElement('div');
+            div.className = 'message-bubble sent';
+            div.innerHTML = `
+                <div class="message-text">${escapeHtml(content)}</div>
+                <div class="sentiment-badge"><span class="badge-neutral">发送中...</span></div>
+            `;
+            container.appendChild(div);
+            scrollToBottom();
+
+            try {
+                const response = await fetch(`${API_BASE}/api/messages/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        receiver_id: currentChatUserId,
+                        content: content
+                    })
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Replace optimistic bubble with real one from server
+                    container.removeChild(div);
+                    appendMessageBubble({
+                        sender_id: currentUser.id,
+                        content: content,
+                        sentiment_score: data.sentiment_score,
+                        created_at: new Date().toISOString()
+                    });
+                    scrollToBottom();
+                } else {
+                    div.querySelector('.sentiment-badge').innerHTML = '<span class="badge-negative">发送失败</span>';
+                }
+            } catch (error) {
+                div.querySelector('.sentiment-badge').innerHTML = '<span class="badge-negative">发送失败</span>';
+            }
+
+            input.disabled = false;
+            input.focus();
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chatMessages');
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // ===== Profile / Me =====
+        async function loadProfile() {
+            const container = document.getElementById('profileContent');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/profile/me`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    currentUser = { ...currentUser, ...data };
+                    renderProfile(data);
+                } else {
+                    container.innerHTML = '<p style="text-align:center; color:#c00;">加载失败</p>';
+                }
+            } catch (error) {
+                container.innerHTML = '<p style="text-align:center; color:#c00;">加载失败</p>';
+            }
+        }
+
+        function renderProfile(user) {
+            const container = document.getElementById('profileContent');
+            const interests = parseInterests(user.interests);
+
+            const verifyBadges = `
+                <div class="verify-badges">
+                    <span class="verify-badge ${user.real_name_verified ? 'verified' : ''}">
+                        ${user.real_name_verified ? '&#x2705;' : '&#x274c;'} 实名认证
+                    </span>
+                    <span class="verify-badge ${user.avatar_verified ? 'verified' : ''}">
+                        ${user.avatar_verified ? '&#x2705;' : '&#x274c;'} 头像认证
+                    </span>
+                    <span class="verify-badge ${user.marital_status_verified ? 'verified' : ''}">
+                        ${user.marital_status_verified ? '&#x2705;' : '&#x274c;'} 婚况认证
+                    </span>
+                </div>`;
+
+            container.innerHTML = `
+                <div class="profile-header">
+                    <div class="profile-avatar-wrapper" style="margin:0 auto;">
+                        <div class="user-avatar user-avatar-lg">
+                            ${user.avatar_url
+                                ? `<img src="${API_BASE}/api/upload/avatar/${user.avatar_url}" onerror="this.parentNode.textContent='${user.username[0].toUpperCase()}'">`
+                                : user.username[0].toUpperCase()}
+                        </div>
+                        <div class="avatar-edit-btn" onclick="showEditProfile()">&#x270f;</div>
+                        <input type="file" id="avatarUpload" class="avatar-upload-input" accept="image/*" onchange="uploadAvatar(this)">
+                    </div>
+                    <h2 style="margin-top:12px; color:#333;">${user.username}</h2>
+                    <p style="color:#999; font-size:14px;">${user.email}</p>
+                    ${user.mbti ? `<span class="mbti-badge">${escapeHtml(user.mbti)}</span>` : ''}
+                    ${verifyBadges}
+                    ${interests.length > 0 ? `<div class="interest-tags" style="justify-content:center; margin-top:10px;">${interests.map(i => `<span class="interest-tag">${i}</span>`).join('')}</div>` : ''}
+                </div>
+
+                <div class="stats-bar">
+                    <div class="stats-bar-item" onclick="showWhoLikedMe()">
+                        <div class="stats-bar-num liked-me" id="statLikedMe">-</div>
+                        <div class="stats-bar-label">喜欢了我</div>
+                    </div>
+                    <div class="stats-bar-divider"></div>
+                    <div class="stats-bar-item" onclick="showMyLikes()">
+                        <div class="stats-bar-num i-liked" id="statILiked">-</div>
+                        <div class="stats-bar-label">我喜欢</div>
+                    </div>
+                    <div class="stats-bar-divider"></div>
+                    <div class="stats-bar-item">
+                        <div class="stats-bar-num" style="color:#28a745;" id="statMatched">-</div>
+                        <div class="stats-bar-label">互相匹配</div>
+                    </div>
+                    <div class="stats-bar-divider"></div>
+                    <div class="stats-bar-item" onclick="showVisitorList()">
+                        <div class="stats-bar-num visitors" id="statVisitors">-</div>
+                        <div class="stats-bar-label">最近来访</div>
+                    </div>
+                </div>
+
+                ${user.dating_goal ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">脱单目标</div>
+                    <div class="profile-section-body">${escapeHtml(user.dating_goal)}</div>
+                </div>` : ''}
+
+                ${user.about_me ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">关于我</div>
+                    <div class="profile-section-body">${escapeHtml(user.about_me)}</div>
+                </div>` : ''}
+
+                ${user.know_me ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">希望 ta 了解的这样的我</div>
+                    <div class="profile-section-body">${escapeHtml(user.know_me)}</div>
+                </div>` : ''}
+
+                ${user.ideal_type ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">我的理想型</div>
+                    <div class="profile-section-body">${escapeHtml(user.ideal_type)}</div>
+                </div>` : ''}
+
+                ${user.free_time_hobbies ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">空闲时间喜欢做什么</div>
+                    <div class="profile-section-body">${escapeHtml(user.free_time_hobbies)}</div>
+                </div>` : ''}
+
+                ${user.love_vision ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">向往的恋爱</div>
+                    <div class="profile-section-body">${escapeHtml(user.love_vision)}</div>
+                </div>` : ''}
+
+                ${user.meeting_preference ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">见面偏好</div>
+                    <div class="profile-section-body">${escapeHtml(user.meeting_preference)}</div>
+                </div>` : ''}
+
+                <div style="margin-top:12px;">
+                    <div class="profile-menu-item" onclick="showVisitorList()">
+                        <span class="profile-menu-icon">&#x1f441;</span>
+                        <span class="profile-menu-text">最近来访</span>
+                        <span class="profile-menu-arrow">&gt;</span>
+                    </div>
+                    <div class="profile-menu-item" onclick="showWhoLikedMe()">
+                        <span class="profile-menu-icon">&#x2764;</span>
+                        <span class="profile-menu-text">喜欢了我</span>
+                        <span class="profile-menu-arrow">&gt;</span>
+                    </div>
+                    <div class="profile-menu-item" onclick="logout()">
+                        <span class="profile-menu-icon">&#x1f6aa;</span>
+                        <span class="profile-menu-text">退出登录</span>
+                        <span class="profile-menu-arrow">&gt;</span>
+                    </div>
+                </div>
+            `;
+
+            loadProfileStats();
+        }
+
+        async function loadProfileStats() {
+            try {
+                const [statsRes, visitorsRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/match/stats`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${API_BASE}/api/profile/visitors`, { headers: { 'Authorization': `Bearer ${token}` } })
+                ]);
+                const stats = await statsRes.json();
+                const visitors = await visitorsRes.json();
+
+                const el = (id) => document.getElementById(id);
+                if (el('statLikedMe')) el('statLikedMe').textContent = stats.liked_me || 0;
+                if (el('statILiked')) el('statILiked').textContent = stats.liked_by_me || 0;
+                if (el('statMatched')) el('statMatched').textContent = stats.matched || 0;
+                if (el('statVisitors')) el('statVisitors').textContent = visitors.total || 0;
+            } catch (e) {
+                console.error('Failed to load stats', e);
+            }
+        }
+
+        function parseInterests(interestsStr) {
+            if (!interestsStr) return [];
+            try {
+                const parsed = JSON.parse(interestsStr);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                // Fallback for str() format like "['a', 'b']"
+                try {
+                    const cleaned = interestsStr.replace(/'/g, '"').replace(/\[|\]/g, '');
+                    return cleaned.split(',').map(s => s.trim().replace(/"/g, '')).filter(Boolean);
+                } catch {
+                    return [];
+                }
+            }
+        }
+
+        // ===== Avatar Upload =====
+        async function uploadAvatar(input) {
+            if (!input.files || !input.files[0]) return;
+
+            const formData = new FormData();
+            formData.append('avatar', input.files[0]);
+
+            showToast('上传中...', '');
+
+            try {
+                const response = await fetch(`${API_BASE}/api/upload/avatar`, {
+                    method: 'POST',
+                    headers: {'Authorization': `Bearer ${token}`},
+                    body: formData
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    showToast('头像上传成功！', 'success');
+                    loadProfile();
+                } else {
+                    showToast(data.error || '上传失败', 'error');
+                }
+            } catch (error) {
+                showToast('上传失败', 'error');
+            }
+
+            input.value = '';
+        }
+
+        // ===== Edit Profile =====
+        async function showEditProfile() {
+            showScreen('editProfileScreen');
+            const container = document.getElementById('editProfileContent');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/profile/me`, {
+                    headers: {'Authorization': `Bearer ${token}`}
+                });
+                const data = await response.json();
+
+                if (response.ok) {
+                    renderEditProfile(data);
+                } else {
+                    container.innerHTML = '<p style="text-align:center; color:#c00;">加载失败</p>';
+                }
+            } catch (error) {
+                container.innerHTML = '<p style="text-align:center; color:#c00;">加载失败</p>';
+            }
+        }
+
+        function renderEditProfile(user) {
+            const container = document.getElementById('editProfileContent');
+            const interests = parseInterests(user.interests);
+            const interestStr = interests.join(', ');
+
+            container.innerHTML = `
+                <div class="form-section-title">基本信息</div>
+                <div class="form-group">
+                    <label>性别</label>
+                    <select id="editGender">
+                        <option value="">请选择</option>
+                        <option value="男" ${user.gender === '男' ? 'selected' : ''}>男</option>
+                        <option value="女" ${user.gender === '女' ? 'selected' : ''}>女</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>生日</label>
+                    <input type="date" id="editBirthday" value="${user.birthday || ''}">
+                </div>
+                <div class="form-group">
+                    <label>所在地</label>
+                    <input type="text" id="editLocation" placeholder="例如：北京" value="${escapeAttr(user.location || '')}">
+                </div>
+                <div class="form-group">
+                    <label>兴趣爱好（用逗号分隔）</label>
+                    <input type="text" id="editInterests" placeholder="例如：阅读, 运动, 摄影" value="${escapeAttr(interestStr)}">
+                </div>
+
+                <div class="form-section-title">脱单信息</div>
+                <div class="form-group">
+                    <label>脱单目标</label>
+                    <select id="editDatingGoal">
+                        <option value="">请选择</option>
+                        <option value="认真恋爱" ${user.dating_goal === '认真恋爱' ? 'selected' : ''}>认真恋爱</option>
+                        <option value="寻找结婚对象" ${user.dating_goal === '寻找结婚对象' ? 'selected' : ''}>寻找结婚对象</option>
+                        <option value="先交朋友" ${user.dating_goal === '先交朋友' ? 'selected' : ''}>先交朋友</option>
+                        <option value="看看缘分" ${user.dating_goal === '看看缘分' ? 'selected' : ''}>看看缘分</option>
+                        <option value="暂不确定" ${user.dating_goal === '暂不确定' ? 'selected' : ''}>暂不确定</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>婚况</label>
+                    <select id="editMaritalStatus">
+                        <option value="">请选择</option>
+                        <option value="未婚" ${user.marital_status === '未婚' ? 'selected' : ''}>未婚</option>
+                        <option value="已婚" ${user.marital_status === '已婚' ? 'selected' : ''}>已婚</option>
+                        <option value="离异" ${user.marital_status === '离异' ? 'selected' : ''}>离异</option>
+                        <option value="丧偶" ${user.marital_status === '丧偶' ? 'selected' : ''}>丧偶</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>见面偏好</label>
+                    <select id="editMeetingPref">
+                        <option value="">请选择</option>
+                        <option value="线上先聊" ${user.meeting_preference === '线上先聊' ? 'selected' : ''}>线上先聊</option>
+                        <option value="随时可以见面" ${user.meeting_preference === '随时可以见面' ? 'selected' : ''}>随时可以见面</option>
+                        <option value="聊熟了再见面" ${user.meeting_preference === '聊熟了再见面' ? 'selected' : ''}>聊熟了再见面</option>
+                        <option value="看情况而定" ${user.meeting_preference === '看情况而定' ? 'selected' : ''}>看情况而定</option>
+                    </select>
+                </div>
+
+                <div class="form-section-title">灵魂标签</div>
+                <div class="form-group">
+                    <label>MBTI 人格</label>
+                    <select id="editMbti">
+                        <option value="">请选择你的 MBTI</option>
+                        ${['INTJ','INTP','ENTJ','ENTP','INFJ','INFP','ENFJ','ENFP','ISTJ','ISFJ','ESTJ','ESFJ','ISTP','ISFP','ESTP','ESFP'].map(t =>
+                            `<option value="${t}" ${user.mbti === t ? 'selected' : ''}>${t}</option>`
+                        ).join('')}
+                    </select>
+                </div>
+
+                <div class="form-section-title">关于我</div>
+                <div class="form-group">
+                    <label>关于我</label>
+                    <textarea id="editAboutMe" placeholder="写一段关于自己的介绍..." rows="3">${user.about_me || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>希望 ta 了解的这样的我</label>
+                    <textarea id="editKnowMe" placeholder="想让 ta 知道的你是什么样的..." rows="3">${user.know_me || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>我的理想型</label>
+                    <textarea id="editIdealType" placeholder="你心中的理想 ta 是什么样..." rows="3">${user.ideal_type || ''}</textarea>
+                </div>
+
+                <div class="form-section-title">生活方式</div>
+                <div class="form-group">
+                    <label>空闲时间喜欢做什么？</label>
+                    <textarea id="editFreeTime" placeholder="平时周末或下班后喜欢做什么..." rows="3">${user.free_time_hobbies || ''}</textarea>
+                </div>
+                <div class="form-group">
+                    <label>向往的恋爱</label>
+                    <textarea id="editLoveVision" placeholder="你心中理想的恋爱是什么样的..." rows="3">${user.love_vision || ''}</textarea>
+                </div>
+
+                <div class="form-section-title">联系方式</div>
+                <div class="form-group">
+                    <label>微信号</label>
+                    <input type="text" id="editWechat" placeholder="匹配成功后可交换微信号" value="${escapeAttr(user.wechat || '')}">
+                </div>
+
+                <div style="display:flex; gap:10px; margin-top:20px;">
+                    <button class="btn btn-secondary" style="flex:1;" onclick="showScreen('profileScreen'); loadProfile();">取消</button>
+                    <button class="btn btn-success" style="flex:1;" onclick="saveProfile()">保存</button>
+                </div>
+            `;
+        }
+
+        function escapeAttr(str) {
+            return str.replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        }
+
+        async function saveProfile() {
+            const interestsStr = document.getElementById('editInterests').value;
+            const interests = interestsStr.split(/[,，]/).map(s => s.trim()).filter(Boolean);
+
+            const data = {
+                gender: document.getElementById('editGender').value || null,
+                birthday: document.getElementById('editBirthday').value || null,
+                location: document.getElementById('editLocation').value || null,
+                interests: interests.length > 0 ? interests : null,
+                dating_goal: document.getElementById('editDatingGoal').value || null,
+                marital_status: document.getElementById('editMaritalStatus').value || null,
+                meeting_preference: document.getElementById('editMeetingPref').value || null,
+                mbti: document.getElementById('editMbti').value || null,
+                about_me: document.getElementById('editAboutMe').value || null,
+                know_me: document.getElementById('editKnowMe').value || null,
+                ideal_type: document.getElementById('editIdealType').value || null,
+                free_time_hobbies: document.getElementById('editFreeTime').value || null,
+                love_vision: document.getElementById('editLoveVision').value || null,
+                wechat: document.getElementById('editWechat').value || null
+            };
+
+            try {
+                const response = await fetch(`${API_BASE}/api/profile/update`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                if (response.ok) {
+                    showToast('资料更新成功！', 'success');
+                    showScreen('profileScreen');
+                    loadProfile();
+                } else {
+                    const result = await response.json();
+                    showToast(result.error || '更新失败', 'error');
+                }
+            } catch (error) {
+                showToast('请求失败', 'error');
+            }
+        }
+
+        // ===== View Other User Profile =====
+        async function viewUserProfile(userId, fromScreen) {
+            const container = document.getElementById('viewProfileContent');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
+
+            if (fromScreen) {
+                document.getElementById('viewProfileBack').onclick = () => showScreen(fromScreen);
+            } else {
+                document.getElementById('viewProfileBack').onclick = () => showScreen('recommendScreen');
+            }
+            document.getElementById('viewProfileTitle').textContent = '个人主页';
+            showScreen('viewProfileScreen');
+
+            // Record profile visit in background
+            fetch(`${API_BASE}/api/profile/visit/${userId}`, {
+                method: 'POST',
+                headers: {'Authorization': `Bearer ${token}`}
+            }).catch(() => {});
+
+            try {
+                const [profileRes, statsRes] = await Promise.all([
+                    fetch(`${API_BASE}/api/profile/${userId}`, { headers: {'Authorization': `Bearer ${token}`} }),
+                    fetch(`${API_BASE}/api/match/liked-by-me`, { headers: {'Authorization': `Bearer ${token}`} })
+                ]);
+                const data = await profileRes.json();
+                const likedData = await statsRes.json();
+
+                if (profileRes.ok) {
+                    const likedIds = new Set((likedData.users || []).map(u => u.id));
+                    data._already_liked = likedIds.has(userId);
+                    renderViewProfile(data);
+                } else {
+                    container.innerHTML = '<p style="text-align:center; color:#c00;">用户不存在</p>';
+                }
+            } catch (error) {
+                container.innerHTML = '<p style="text-align:center; color:#c00;">加载失败</p>';
+            }
+        }
+
+        function renderViewProfile(user) {
+            const container = document.getElementById('viewProfileContent');
+            const interests = parseInterests(user.interests);
+
+            const verifyBadges = `
+                <div class="verify-badges">
+                    <span class="verify-badge ${user.real_name_verified ? 'verified' : ''}">
+                        ${user.real_name_verified ? '&#x2705;' : '&#x274c;'} 实名认证
+                    </span>
+                    <span class="verify-badge ${user.avatar_verified ? 'verified' : ''}">
+                        ${user.avatar_verified ? '&#x2705;' : '&#x274c;'} 头像认证
+                    </span>
+                    <span class="verify-badge ${user.marital_status_verified ? 'verified' : ''}">
+                        ${user.marital_status_verified ? '&#x2705;' : '&#x274c;'} 婚况认证
+                    </span>
+                </div>`;
+
+            container.innerHTML = `
+                <div class="profile-header">
+                    <div class="user-avatar user-avatar-lg" style="margin:0 auto;">
+                        ${user.avatar_url
+                            ? `<img src="${API_BASE}/api/upload/avatar/${user.avatar_url}" onerror="this.parentNode.textContent='${user.username[0].toUpperCase()}'">`
+                            : user.username[0].toUpperCase()}
+                    </div>
+                    <h2 style="margin-top:12px; color:#333;">${user.username}</h2>
+                    <p style="color:#999; font-size:14px;">${user.gender || '未设置'} · ${user.location || '未知'} · ${user.marital_status || '未填'}</p>
+                    ${user.mbti ? `<div style="margin-top:6px;"><span class="mbti-badge">${escapeHtml(user.mbti)}</span></div>` : ''}
+                    ${verifyBadges}
+                    ${interests.length > 0 ? `<div class="interest-tags" style="justify-content:center; margin-top:10px;">${interests.map(i => `<span class="interest-tag">${i}</span>`).join('')}</div>` : ''}
+                </div>
+
+                ${user.dating_goal ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">脱单目标</div>
+                    <div class="profile-section-body">${escapeHtml(user.dating_goal)}</div>
+                </div>` : ''}
+
+                ${user.about_me ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">关于我</div>
+                    <div class="profile-section-body">${escapeHtml(user.about_me)}</div>
+                </div>` : ''}
+
+                ${user.know_me ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">希望 ta 了解的这样的我</div>
+                    <div class="profile-section-body">${escapeHtml(user.know_me)}</div>
+                </div>` : ''}
+
+                ${user.ideal_type ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">我的理想型</div>
+                    <div class="profile-section-body">${escapeHtml(user.ideal_type)}</div>
+                </div>` : ''}
+
+                ${user.free_time_hobbies ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">空闲时间喜欢做什么</div>
+                    <div class="profile-section-body">${escapeHtml(user.free_time_hobbies)}</div>
+                </div>` : ''}
+
+                ${user.love_vision ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">向往的恋爱</div>
+                    <div class="profile-section-body">${escapeHtml(user.love_vision)}</div>
+                </div>` : ''}
+
+                ${user.meeting_preference ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">见面偏好</div>
+                    <div class="profile-section-body">${escapeHtml(user.meeting_preference)}</div>
+                </div>` : ''}
+
+                ${user.bio ? `
+                <div class="profile-section">
+                    <div class="profile-section-title">个人简介</div>
+                    <div class="profile-section-body">${escapeHtml(user.bio)}</div>
+                </div>` : ''}
+
+                <div style="margin-top:20px;">
+                    <button class="btn ${user._already_liked ? 'btn-secondary' : 'btn-success'}" ${user._already_liked ? 'disabled' : ''} onclick="likeUser(${user.id});">
+                        ${user._already_liked ? '&#x2764; 已喜欢' : '&#x2764; 喜欢 Ta'}
+                    </button>
+                </div>
+            `;
+        }
+
+        // ===== Visitor List & Who Liked Me =====
+        function renderUserList(container, users, statusLabel, emptyIcon, emptyText, emptySubText) {
+            if (users && users.length > 0) {
+                container.innerHTML = users.map(u => {
+                    return `<div class="chat-list-item" onclick="viewUserProfile(${u.id}, 'listView')">
+                        <div class="user-avatar user-avatar-sm">
+                            ${u.avatar_url
+                                ? `<img src="${API_BASE}/api/upload/avatar/${u.avatar_url}" onerror="this.parentNode.textContent='${u.username[0].toUpperCase()}'">`
+                                : u.username[0].toUpperCase()}
+                        </div>
+                        <div class="chat-list-info">
+                            <div class="chat-list-name">${u.username}</div>
+                            <div class="chat-list-preview">${u.gender || ''} ${u.location ? '· ' + u.location : ''} ${u.bio ? '· ' + u.bio : ''}</div>
+                        </div>
+                        <span style="color:#ccc; font-size:12px;">&gt;</span>
+                    </div>`;
+                }).join('');
+            } else {
+                container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${emptyIcon}</div><p>${emptyText}</p><p style="font-size:13px; margin-top:8px;">${emptySubText || ''}</p></div>`;
+            }
+        }
+
+        async function showVisitorList() {
+            const container = document.getElementById('viewProfileContent');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
+            document.getElementById('viewProfileBack').onclick = () => showScreen('profileScreen');
+            document.getElementById('viewProfileTitle').textContent = '最近来访';
+            showScreen('viewProfileScreen');
+
+            try {
+                const r = await fetch(`${API_BASE}/api/profile/visitors`, { headers: {'Authorization': `Bearer ${token}`} });
+                const data = await r.json();
+
+                if (data.visitors && data.visitors.length > 0) {
+                    container.innerHTML = data.visitors.map(v => {
+                        const time = v.last_visit ? timeAgo(v.last_visit) : '';
+                        return `<div class="chat-list-item" onclick="viewUserProfile(${v.visitor_id}, 'listView')">
+                            <div class="user-avatar user-avatar-sm">
+                                ${v.avatar_url
+                                    ? `<img src="${API_BASE}/api/upload/avatar/${v.avatar_url}" onerror="this.parentNode.textContent='${v.username[0].toUpperCase()}'">`
+                                    : v.username[0].toUpperCase()}
+                            </div>
+                            <div class="chat-list-info">
+                                <div class="chat-list-name">${v.username}</div>
+                                <div class="chat-list-preview">${time} 来访过</div>
+                            </div>
+                            <span class="chat-list-time">${time}</span>
+                        </div>`;
+                    }).join('');
+                } else {
+                    container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">&#x1f441;</div><p>暂无来访记录</p></div>`;
+                }
+            } catch (e) {
+                container.innerHTML = '<p style="text-align:center; color:#c00;">加载失败</p>';
+            }
+        }
+
+        async function showWhoLikedMe() {
+            const container = document.getElementById('viewProfileContent');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
+            document.getElementById('viewProfileBack').onclick = () => showScreen('profileScreen');
+            document.getElementById('viewProfileTitle').textContent = '喜欢了我';
+            showScreen('viewProfileScreen');
+
+            try {
+                const r = await fetch(`${API_BASE}/api/match/liked-me`, { headers: {'Authorization': `Bearer ${token}`} });
+                const data = await r.json();
+                renderUserList(container, data.users, '',
+                    '&#x2764;', '还没有人喜欢你', '完善资料，让更多人看到你吧！');
+            } catch (e) {
+                container.innerHTML = '<p style="text-align:center; color:#c00;">加载失败</p>';
+            }
+        }
+
+        async function showMyLikes() {
+            const container = document.getElementById('viewProfileContent');
+            container.innerHTML = '<div class="loading"><div class="spinner"></div><p>加载中...</p></div>';
+            document.getElementById('viewProfileBack').onclick = () => showScreen('profileScreen');
+            document.getElementById('viewProfileTitle').textContent = '我喜欢';
+            showScreen('viewProfileScreen');
+
+            try {
+                const r = await fetch(`${API_BASE}/api/match/liked-by-me`, { headers: {'Authorization': `Bearer ${token}`} });
+                const data = await r.json();
+                renderUserList(container, data.users, '',
+                    '&#x1f49d;', '还没有喜欢任何人', '去推荐页面发现心动的人吧！');
+            } catch (e) {
+                container.innerHTML = '<p style="text-align:center; color:#c00;">加载失败</p>';
+            }
+        }
+
+        function timeAgo(dateStr) {
+            const now = new Date();
+            const past = new Date(dateStr);
+            const diff = Math.floor((now - past) / 1000);
+            if (diff < 60) return '刚刚';
+            if (diff < 3600) return Math.floor(diff / 60) + '分钟前';
+            if (diff < 86400) return Math.floor(diff / 3600) + '小时前';
+            if (diff < 604800) return Math.floor(diff / 86400) + '天前';
+            return dateStr.split(' ')[0];
+        }
+    </script>
+</body>
+</html>
