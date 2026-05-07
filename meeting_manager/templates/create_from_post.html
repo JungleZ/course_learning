@@ -3,181 +3,191 @@
 {% block content %}
 {% set lang = session.get('lang', 'zh') %}
 <div class="row justify-content-center">
-    <div class="col-lg-10">
+    <div class="col-lg-8">
         <div class="card shadow-sm">
-            <div class="card-header bg-primary text-white">
-                <h4 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>{% if lang == 'en' %}Create Meeting from WeChat Post{% elif lang == 'both' %}从微信群帖子创建会议 Create Meeting from Post{% else %}从微信群帖子创建会议{% endif %}</h4>
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    {% if lang == 'en' %}Create Meeting from Post{% else %}从帖子创建会议{% endif %}
+                </h4>
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
-                    <i class="bi bi-info-circle me-2"></i>
-                    {% if lang == 'en' %}
-                        Paste the complete WeChat group post below. The system will automatically parse meeting info (number, time, address) and registrations.
-                    {% elif lang == 'both' %}
-                        请在下方粘贴完整的微信群帖子内容，系统将自动解析会议信息（编号、时间、地址）和报名记录。
-                        <br>Paste the complete WeChat post to auto-parse meeting info and registrations.
-                    {% else %}
-                        请在下方粘贴完整的微信群帖子内容，系统将自动解析会议信息（编号、时间、地址）和报名记录。
-                    {% endif %}
-                </div>
-
-                <form method="POST" action="{{ url_for('create_meeting_from_post') }}">
+                {% if not preview %}
+                {# ===== Step 1: Paste post content ===== #}
+                <form method="POST" action="{{ url_for('create_from_post') }}">
+                    <input type="hidden" name="action" value="parse">
                     <div class="mb-3">
                         <label for="post_text" class="form-label">
-                            {% if lang == 'en' %}WeChat Post Content{% elif lang == 'both' %}微信群帖子内容 WeChat Post{% else %}微信群帖子内容{% endif %}
+                            {% if lang == 'en' %}Paste Meeting Post{% else %}粘贴会议帖子内容{% endif %} <span class="text-danger">*</span>
                         </label>
-                        <textarea class="form-control" id="post_text" name="post_text" rows="25" required
-                                  placeholder="{% if lang == 'en' %}Paste the complete post here...{% elif lang == 'both' %}在此粘贴完整的帖子内容...{% else %}在此粘贴完整的帖子内容...{% endif %}">{% if lang == 'en' %}#接龙
-GEM# 767 Meeting
-(Monday, 30 Mar. 2026)
-Time: 19:20 - 21:20
-opens for all the guests.
-opens for TM.
+                        <textarea class="form-control" id="post_text" name="post_text" rows="15" 
+                                  placeholder="{% if lang == 'en' %}Paste Toastmasters meeting post here...{% else %}粘贴头马例会帖子，例如：
 
-地址：广州市天河区珠江新城华穗路172号星辰大厦西塔1904-A房（3/5号线珠江新城B1出口）
-非会员需分摊场地费：30元/次
-
-MM: Guiling/Sibley
-SAA:
-Opening remark: 
-—Facilitators Team—
-TOM: 
-Timer:
-Game master: 
-Photographer: Sophie
-Ah-counter: Wendy
-Grammarian: 
-GE: 
-
-Table Topic Session 
-Theme: 
-TTM:  
-TTE: 
-
-—Prepared Speeches—
-Speaker 1: Liddy
-Speaker 2: Cathy
-Speaker 3: Sibley
-Speaker 4: Xiaoshu
-IE 1: 
-IE 2: 
-IE 3: 
-IE 4: 
-Welcome to book our role and join our meeting!
-
-1. Guiling
-2. Sibley
-3. Cathy
-4. Xiaoshu
-5. Liddy
-6.{% else %}#接龙
-GEM# 767 Meeting
-(Monday, 30 Mar. 2026)
-Time: 19:20 - 21:20
-opens for all the guests.
-opens for TM.
-
-地址：广州市天河区珠江新城华穗路172号星辰大厦西塔1904-A房（3/5号线珠江新城B1出口）
-非会员需分摊场地费：30元/次
-
-MM: Guiling/Sibley
-SAA:
-Opening remark: 
-—Facilitators Team—
-TOM: 
-Timer:
-Game master: 
-Photographer: Sophie
-Ah-counter: Wendy
-Grammarian: 
-GE: 
-
-Table Topic Session 
-Theme: 
-TTM:  
-TTE: 
-
-—Prepared Speeches—
-Speaker 1: Liddy
-Speaker 2: Cathy
-Speaker 3: Sibley
-Speaker 4: Xiaoshu
-IE 1: 
-IE 2: 
-IE 3: 
-IE 4: 
-欢迎报名角色并参加会议！
-
-1. Guiling
-2. Sibley
-3. Cathy
-4. Xiaoshu
-5. Liddy
-6.{% endif %}</textarea>
+GZ Galaxy 头马例会 #982
+📅 会议日期：2026 年 5 月 7 日 周四
+⏰ 会议时间：19:30 ~ 21:30
+📍 会议地址：珠江新城 - 星辰大厦 1904
+会议主席 MM：Christina Fang
+会场官 SAA：Scott Peng
+时间官 Timer：Mei
+...{% endif %}" required></textarea>
+                        <div class="form-text">
+                            {% if lang == 'en' %}Supports Toastmasters meeting post format. Meeting number, date, address and registrations will be auto-parsed, then you can preview and confirm.{% else %}支持头马例会帖子格式。将自动解析会议编号、日期、地址和报名信息，解析后可预览确认再创建。{% endif %}
+                        </div>
                     </div>
-
+                    
                     <div class="d-grid gap-2 d-md-flex justify-content-md-end">
                         <a href="{{ url_for('index') }}" class="btn btn-secondary me-md-2">
-                            <i class="bi bi-arrow-left me-1"></i>{% if lang == 'en' %}Back{% else %}返回{% endif %}
+                            <i class="bi bi-arrow-left me-1"></i>{% if lang == 'en' %}Back{% else %}返回列表{% endif %}
                         </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-plus-circle me-1"></i>{% if lang == 'en' %}Create Meeting{% else %}创建会议{% endif %}
+                        <button type="submit" class="btn btn-info">
+                            <i class="bi bi-search me-1"></i>
+                            {% if lang == 'en' %}Parse & Preview{% else %}解析并预览{% endif %}
                         </button>
                     </div>
                 </form>
 
-                <hr class="my-4">
-                <h5 class="mb-3">
-                    <i class="bi bi-question-circle me-2"></i>
-                    {% if lang == 'en' %}What will be parsed?{% elif lang == 'both' %}将解析什么内容？ What will be parsed?{% else %}将解析什么内容？{% endif %}
-                </h5>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <strong>{% if lang == 'en' %}Meeting Information{% elif lang == 'both' %}会议信息 Meeting Info{% else %}会议信息{% endif %}</strong>
-                            </div>
-                            <div class="card-body">
-                                <ul class="mb-0">
-                                    <li>{% if lang == 'en' %}Meeting Number (GEM# 767){% elif lang == 'both' %}会议编号 (GEM# 767){% else %}会议编号 (GEM# 767){% endif %}</li>
-                                    <li>{% if lang == 'en' %}Date (Monday, 30 Mar. 2026){% elif lang == 'both' %}日期 (Monday, 30 Mar. 2026){% else %}日期 (Monday, 30 Mar. 2026){% endif %}</li>
-                                    <li>{% if lang == 'en' %}Time (19:20 - 21:20){% elif lang == 'both' %}时间 (19:20 - 21:20){% else %}时间 (19:20 - 21:20){% endif %}</li>
-                                    <li>{% if lang == 'en' %}Address{% elif lang == 'both' %}地址 Address{% else %}地址{% endif %}</li>
-                                    <li>{% if lang == 'en' %}Fee Info{% elif lang == 'both' %}费用 Fee Info{% else %}费用{% endif %}</li>
-                                </ul>
-                            </div>
-                        </div>
+                {% else %}
+                {# ===== Step 2: Preview parsed results ===== #}
+                
+                {% if hints %}
+                <div class="alert alert-warning mb-3">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    <strong>{% if lang == 'en' %}Parsing hints:{% else %}解析提示：{% endif %}</strong>
+                    <ul class="mb-0 mt-1">
+                        {% for hint in hints %}
+                        <li>{{ hint }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                {% if meeting_info.meeting_id %}
+                <div class="alert {% if hints %}alert-warning{% else %}alert-success{% endif %} mb-3">
+                    <i class="bi bi-{% if hints %}exclamation-triangle{% else %}check-circle{% endif %} me-1"></i>
+                    {% if hints %}
+                        {% if lang == 'en' %}Partially parsed. You can confirm to create with detected fields, or go back and adjust the post.{% else %}部分解析成功。您可以确认创建已识别的字段，或返回修改帖子内容。{% endif %}
+                    {% else %}
+                        {% if lang == 'en' %}All key fields parsed successfully! Please confirm to create.{% else %}关键字段解析成功！请确认创建。{% endif %}
+                    {% endif %}
+                </div>
+
+                {# Meeting info preview card #}
+                <div class="card mb-3 border-primary">
+                    <div class="card-header bg-primary text-white py-2">
+                        <i class="bi bi-calendar-event me-1"></i>
+                        {% if lang == 'en' %}Meeting Info Preview{% else %}会议信息预览{% endif %}
                     </div>
-                    <div class="col-md-6">
-                        <div class="card mb-3">
-                            <div class="card-header bg-light">
-                                <strong>{% if lang == 'en' %}Registrations{% elif lang == 'both' %}报名记录 Registrations{% else %}报名记录{% endif %}</strong>
-                            </div>
-                            <div class="card-body">
-                                <ul class="mb-0">
-                                    <li>{% if lang == 'en' %}MM, SAA, TOM, etc.{% elif lang == 'both' %}MM、SAA、TOM 等{% else %}MM、SAA、TOM 等{% endif %}</li>
-                                    <li>{% if lang == 'en' %}Facilitators (Timer, GE, etc.){% elif lang == 'both' %}执行团队成员 (Timer, GE 等){% else %}执行团队成员 (Timer, GE 等){% endif %}</li>
-                                    <li>{% if lang == 'en' %}Speakers (Speaker 1-4){% elif lang == 'both' %}演讲者 (Speaker 1-4){% else %}演讲者 (Speaker 1-4){% endif %}</li>
-                                    <li>{% if lang == 'en' %}Evaluators (IE 1-4){% elif lang == 'both' %}点评人 (IE 1-4){% else %}点评人 (IE 1-4){% endif %}</li>
-                                    <li>{% if lang == 'en' %}Table Topics roles{% elif lang == 'both' %}即兴演讲角色{% else %}即兴演讲角色{% endif %}</li>
-                                </ul>
-                            </div>
-                        </div>
+                    <div class="card-body">
+                        <table class="table table-sm mb-0">
+                            <tr>
+                                <th style="width:120px;">{% if lang == 'en' %}Meeting #{% else %}会议编号{% endif %}</th>
+                                <td class="fw-bold">{{ meeting_info.meeting_id }}</td>
+                            </tr>
+                            <tr>
+                                <th>{% if lang == 'en' %}Theme{% else %}会议主题{% endif %}</th>
+                                <td>{{ meeting_info.theme or '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>{% if lang == 'en' %}Date/Time{% else %}日期时间{% endif %}</th>
+                                <td>{{ meeting_info.time or '-' }}</td>
+                            </tr>
+                            <tr>
+                                <th>{% if lang == 'en' %}Address{% else %}会议地址{% endif %}</th>
+                                <td>{{ meeting_info.address or '-' }}</td>
+                            </tr>
+                        </table>
                     </div>
                 </div>
 
-                <div class="alert alert-warning mt-3">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>{% if lang == 'en' %}Note:{% elif lang == 'both' %}注意 Note:{% else %}注意：{% endif %}</strong>
-                    {% if lang == 'en' %}
-                        Only roles with names filled will be imported. If meeting already exists, you will be redirected to it.
-                    {% elif lang == 'both' %}
-                        仅导入已填写姓名的角色。如果会议已存在，将直接跳转到该会议。
-                        <br>Only roles with names filled will be imported. Duplicates will be redirected.
-                    {% else %}
-                        仅导入已填写姓名的角色。如果会议已存在，将直接跳转到该会议。
-                    {% endif %}
+                {# Registrations preview card #}
+                {% if registrations %}
+                <div class="card mb-3 border-success">
+                    <div class="card-header bg-success text-white py-2">
+                        <i class="bi bi-people me-1"></i>
+                        {% if lang == 'en' %}Registrations Preview ({{ registrations|length }}){% else %}报名信息预览（{{ registrations|length }} 人）{% endif %}
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:50px;">#</th>
+                                    <th>{% if lang == 'en' %}Role{% else %}角色{% endif %}</th>
+                                    <th>{% if lang == 'en' %}Name{% else %}姓名{% endif %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for role_name, member_name in registrations %}
+                                <tr>
+                                    <td>{{ loop.index }}</td>
+                                    <td><span class="badge bg-primary">{{ role_name }}</span></td>
+                                    <td>{{ member_name }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
+                {% endif %}
+
+                {# Confirm / Go back buttons #}
+                <form method="POST" action="{{ url_for('create_from_post') }}">
+                    <input type="hidden" name="action" value="confirm">
+                    <input type="hidden" name="meeting_id" value="{{ meeting_info.meeting_id }}">
+                    <input type="hidden" name="theme" value="{{ meeting_info.theme or '' }}">
+                    <input type="hidden" name="time" value="{{ meeting_info.time or '' }}">
+                    <input type="hidden" name="address" value="{{ meeting_info.address or '' }}">
+                    <input type="hidden" name="registrations" value="{{ registrations | tojson }}">
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" name="back" value="1" formaction="{{ url_for('create_from_post') }}" formmethod="GET" class="btn btn-secondary me-md-2">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            {% if lang == 'en' %}Go Back & Edit{% else %}返回修改帖子{% endif %}
+                        </button>
+                        <button type="submit" class="btn btn-success" {% if not meeting_info.meeting_id %}disabled{% endif %}>
+                            <i class="bi bi-check-circle me-1"></i>
+                            {% if lang == 'en' %}Confirm & Create{% else %}确认创建会议{% endif %}
+                        </button>
+                    </div>
+                </form>
+
+                {% else %}
+                {# No meeting_id parsed - show error and let user go back #}
+                <div class="alert alert-danger mb-3">
+                    <i class="bi bi-x-circle me-1"></i>
+                    <strong>{% if lang == 'en' %}Failed to parse meeting number!{% else %}未能解析出会议编号！{% endif %}</strong>
+                    {% if lang == 'en' %}Please go back and check the post format.{% else %}请返回检查帖子格式。{% endif %}
+                </div>
+                
+                {% if hints %}
+                <div class="alert alert-info mb-3">
+                    <i class="bi bi-lightbulb me-1"></i>
+                    <strong>{% if lang == 'en' %}Tips:{% else %}格式提示：{% endif %}</strong>
+                    <ul class="mb-0 mt-1">
+                        {% for hint in hints %}
+                        <li>{{ hint }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <form method="GET" action="{{ url_for('create_from_post') }}">
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            {% if lang == 'en' %}Go Back & Edit{% else %}返回修改帖子{% endif %}
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+
+                {% endif %}
+            </div>
+            <div class="card-footer text-muted">
+                <small>
+                    <i class="bi bi-info-circle me-1"></i>
+                    {% if lang == 'en' %}Supported formats: Meeting # (e.g. #982), Date (e.g. 2026年5月7日), Time (e.g. 19:30~21:30), Address (e.g. 地址：xxx), Role registrations (e.g. MM: Name){% else %}支持格式：会议编号（如 #982）、日期（如 2026年5月7日）、时间（如 19:30~21:30）、地址（如 地址：xxx）、角色报名（如 MM: 姓名）{% endif %}
+                </small>
             </div>
         </div>
     </div>

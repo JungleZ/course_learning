@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
 import sqlite3
 import re
+import json
 
 app = Flask(__name__)
 app.secret_key = 'meeting_manager_secret_key'
@@ -333,90 +334,6 @@ def help():
     """帮助页面"""
     return render_template('help.html')
 
-@app.route('/create-from-post', methods=['GET', 'POST'])
-def create_meeting_from_post():
-    """Create meeting from WeChat group sign-up post"""
-    if request.method == 'POST':
-        post_text = request.form.get('post_text', '')
-        
-        if not post_text.strip():
-            flash('请输入接龙帖子内容！', 'warning')
-        else:
-            # Parse meeting info and registrations from the post
-            meeting_info, registrations = parse_meeting_from_post(post_text)
-            
-            if not meeting_info.get('meeting_id'):
-                flash('未能解析出会议编号，请检查帖子格式！', 'warning')
-            else:
-                conn = get_db_connection()
-                try:
-                    # Check if meeting already exists
-                    existing = conn.execute('SELECT id FROM meetings WHERE meeting_id = ?', 
-                                          (meeting_info['meeting_id'],)).fetchone()
-                    if existing:
-                        flash(f'会议 {meeting_info["meeting_id"]} 已存在！', 'danger')
-                        return redirect(url_for('meeting_detail', meeting_db_id=existing['id']))
-                    
-                    # Insert meeting
-                    conn.execute("""
-                        INSERT INTO meetings (meeting_id, theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        meeting_info['meeting_id'],
-                        meeting_info.get('theme', ''),
-                        meeting_info.get('english_theme', ''),
-                        meeting_info.get('time', ''),
-                        meeting_info.get('time_en', ''),
-                        meeting_info.get('address', ''),
-                        meeting_info.get('address_en', ''),
-                        meeting_info.get('fee_info', ''),
-                        meeting_info.get('fee_info_en', ''),
-                    ))
-                    meeting_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
-                    
-                    # Populate meeting_roles table with all default roles
-                    for role in DEFAULT_ROLES:
-                        try:
-                            conn.execute(
-                                "INSERT INTO meeting_roles (meeting_id, role_name) VALUES (?, ?)",
-                                (meeting_id, role['name_zh'])
-                            )
-                        except sqlite3.IntegrityError:
-                            pass
-                    
-                    # Insert registrations
-                    imported_count = 0
-                    for role_name, member_name in registrations:
-                        try:
-                            # Add member if not exists
-                            existing_member = conn.execute('SELECT * FROM members WHERE name = ?', 
-                                                         (member_name,)).fetchone()
-                            if not existing_member:
-                                conn.execute("INSERT INTO members (name, is_member) VALUES (?, ?)", 
-                                           (member_name, 0))  # Default to guest
-                            
-                            # Add registration
-                            conn.execute(
-                                "INSERT INTO registrations (meeting_id, role_name, member_name) VALUES (?, ?, ?)",
-                                (meeting_id, role_name, member_name)
-                            )
-                            imported_count += 1
-                        except sqlite3.IntegrityError:
-                            pass
-                    
-                    conn.commit()
-                    flash(f'会议创建成功！导入 {imported_count} 条报名记录。', 'success')
-                    return redirect(url_for('meeting_detail', meeting_db_id=meeting_id))
-                    
-                except Exception as e:
-                    conn.rollback()
-                    flash(f'创建会议失败：{str(e)}', 'danger')
-                finally:
-                    conn.close()
-    
-    return render_template('create_from_post.html')
-
-
 def normalize_wechat_post_text(text):
     """
     Normalize WeChat post text before parsing.
@@ -425,76 +342,97 @@ def normalize_wechat_post_text(text):
         return ''
 
     text = text.replace('\r\n', '\n').replace('\r', '\n')
+    
+    # Split lines that have multiple "role：name" pairs without newline separation
+    # e.g., "即兴主持人：Ken Luo即兴点评官：Lavender Li" -> two lines
+    # Must do this BEFORE replacing ：→: so we can anchor on Chinese colon
+    role_keys_for_split = r'(即兴主持人|即兴点评官|演讲者\s*\d|点评官\s*\d|会议主席|mm|saa|timer|ah-counter|grammarian|ge|总点评官|时间官|哼唧官|哼哈官|语言官|语法官|摄影师|自由分享|嘉宾分享|成长工作坊|后备|工作坊主讲|会议主持|技术支持|后备人员|president|会长|会议经理)'
+    text = re.sub(
+        r'([^\n])(' + role_keys_for_split + r')[：:]',
+        r'\1\n\2: ',
+        text
+    )
+    
+    # Now replace Chinese punctuation
     text = text.replace('：', ':').replace('；', ';').replace('，', ',')
     text = text.replace('（', '(').replace('）', ')')
     text = re.sub(r'[—–−]+', '-', text)
     text = re.sub(r'\s*:\s*', ': ', text)
     text = re.sub(r'^[\-\*\u2022]\s*', '', text, flags=re.M)
+    
     return text.strip()
 
-
-def parse_meeting_from_post(text):
-    """
-    Parse WeChat group post and extract meeting info and registrations.
-    Returns: (meeting_info_dict, [(role_name, member_name), ...])
-    """
-    meeting_info = {}
-    text = normalize_wechat_post_text(text)
-
-    # Parse meeting ID and theme from the heading line
-    match = re.search(r'GEM#?\s*(\d+)\s*(.*)', text, re.IGNORECASE)
-    if match:
-        meeting_info['meeting_id'] = match.group(1)
-        theme_text = match.group(2).strip()
-        if theme_text and theme_text.lower() != 'meeting':
-            meeting_info['theme'] = theme_text
-
-    if 'meeting_id' in meeting_info and not meeting_info.get('theme'):
-        meeting_info['theme'] = f'GEM#{meeting_info["meeting_id"]} Meeting'
-
-    # Parse date / english theme
-    match = re.search(r'\(([^\)]+\d{4})\)', text)
-    if match:
-        meeting_info['english_theme'] = match.group(1).strip()
-
-    # Time: 🕤Time: 19:20 - 21:20
-    match = re.search(r'(?:Time|时间)[:：]\s*(\d{1,2}:\d{2})\s*[-–—]\s*(\d{1,2}:\d{2})', text)
-    if match:
-        meeting_info['time'] = match.group(1)
-        meeting_info['time_en'] = match.group(1)
-    else:
-        match = re.search(r'(?:Time|时间)[:：]\s*(\d{1,2}:\d{2})', text)
-        if match:
-            meeting_info['time'] = match.group(1)
-            meeting_info['time_en'] = match.group(1)
-
-    # Address
-    match = re.search(r'(?:地址|Venue|Address)[:：]\s*(.+)', text)
-    if match:
-        address = match.group(1).strip()
-        meeting_info['address'] = address
-        meeting_info['address_en'] = address
-
-    # Fee info
-    match = re.search(r'(?:非会员需分摊场地费|Fee)[:：]\s*(.+)', text)
-    if match:
-        fee = match.group(1).strip()
-        meeting_info['fee_info'] = f'非会员需分摊场地费：{fee}'
-        meeting_info['fee_info_en'] = f'Fee: {fee}'
-
-    # Parse registrations using the shared WeChat signup parser
-    registrations = parse_wechat_signup(text)
-    return meeting_info, registrations
 
 def parse_wechat_signup(text):
     """
     Parse WeChat group sign-up post and extract registrations.
-    Supports multiple post formats.
+    Supports multiple post formats, including:
+    - GZ Galaxy Toastmasters meeting posts
+    - Standard role: member format
     Returns: list of (role_name, member_name) tuples
     """
     registrations = []
     text = normalize_wechat_post_text(text)
     lines = text.strip().split('\n')
+    
+    # First, try to extract meeting info and registrations from GZ Galaxy format
+    meeting_info = {
+        'meeting_id': '',
+        'theme': '',
+        'time': '',
+        'address': '',
+        'english_theme': '',
+        'time_en': '',
+        'address_en': '',
+        'fee_info': '',
+        'fee_info_en': '',
+    }
+    
+    # Extract meeting number: GZ Galaxy 头马例会 #982 or #982
+    match = re.search(r'#\s*(\d+)', text)
+    if match:
+        meeting_info['meeting_id'] = match.group(1)
+        print(f"DEBUG: Found meeting_id: {match.group(1)}")
+    
+    # Extract date: 2026 年 5 月 7 日 周四
+    match = re.search(r'(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日', text)
+    if match:
+        year, month, day = match.groups()
+        meeting_info['time'] = f"{year}/{int(month):02d}/{int(day):02d}"
+        meeting_info['time_en'] = f"{year}/{int(month):02d}/{int(day):02d}"
+    
+    # Extract time: 19:30 ~ 21:30 (support both ASCII ~ and Unicode ～)
+    match = re.search(r'(\d{1,2}:\d{2})\s*[~～]\s*(\d{1,2}:\d{2})', text)
+    if match:
+        start_time = match.group(1)
+        end_time = match.group(2)
+        meeting_info['time'] += f" ({start_time}-{end_time})"
+        meeting_info['time_en'] += f" ({start_time}-{end_time})"
+    
+    # Extract theme from first line or "欢迎" line
+    lines = text.strip().split('\n')
+    for line in lines:
+        line = line.strip()
+        if line and not line.startswith('#') and '头马例会' in line:
+            meeting_info['theme'] = line
+            meeting_info['english_theme'] = line
+            break
+    if not meeting_info['theme']:
+        # Try to find "欢迎" line and use previous line
+        for i, line in enumerate(lines):
+            if '欢迎' in line and i > 0:
+                meeting_info['theme'] = lines[i-1].strip()
+                meeting_info['english_theme'] = lines[i-1].strip()
+                break
+    
+    # Extract address: 珠江新城 - 星辰大厦 1904
+    match = re.search(r'(?:会议地址|地址|地点)[：:]\s*(.+)', text)
+    if not match:
+        match = re.search(r'(珠江新城[^\n]+)', text)
+    if match:
+        address = match.group(1).strip()
+        meeting_info['address'] = address
+        meeting_info['address_en'] = address
     
     # Role mapping from Chinese/abbreviated/English to standard DB role names (name_zh from DEFAULT_ROLES)
     role_mapping = {
@@ -503,6 +441,8 @@ def parse_wechat_signup(text):
         'master of ceremonies': '会议经理',
         '主持人': '会议经理',
         'meeting manager': '会议经理',
+        '会议主席': '会议经理',
+        '会议经理': '会议经理',
         
         # SAA
         'saa': '接待官',
@@ -510,12 +450,17 @@ def parse_wechat_signup(text):
         'sargeant-at-arms': '接待官',
         '迎宾官': '接待官',
         'receptionist': '接待官',
+        '会场官': '接待官',
+        '后勤': '接待官',
         
         # TOM
         'tom': '总主持',
         'toastmaster': '总主持',
-        'table topics master': '总主持', # Sometimes TTM is confused or used broadly, but usually TTM is specific
-        '即兴主持': '总主持', # In some contexts people might mix them up, but let's stick to standard mapping below for TTM
+        'toastmaster of evening': '总主持',
+        'table topics master': '总主持',
+        '即兴主持': '总主持',
+        '会议主持': '总主持',
+        '技术支持': '总主持',
         
         # Timer
         'timer': '时间官',
@@ -536,11 +481,13 @@ def parse_wechat_signup(text):
         'ah counter': '哼哈官',
         'ah': '哼哈官',
         '哼哈官': '哼哈官',
+        '哼唧官': '哼哈官',
         
         # Grammarian
         'grammarian': '语法官',
         'gram': '语法官',
         '语法官': '语法官',
+        '语言官': '语法官',
         
         # GE
         'ge': '总点评',
@@ -551,35 +498,45 @@ def parse_wechat_signup(text):
         'ttm': '即兴主持',
         'table topics master': '即兴主持',
         '即兴主持': '即兴主持',
+        '即兴主持人': '即兴主持',
         
         # TTE
         'tte': '即兴点评',
         'table topics evaluator': '即兴点评',
         '即兴点评': '即兴点评',
+        '即兴点评官': '即兴点评',
         
         # Prepared Speeches
         'speaker 1': '备稿演讲1',
         'ps1': '备稿演讲1',
         '备稿演讲1': '备稿演讲1',
+        '演讲者 1': '备稿演讲1',
         'speaker 2': '备稿演讲2',
         'ps2': '备稿演讲2',
         '备稿演讲2': '备稿演讲2',
+        '演讲者 2': '备稿演讲2',
         'speaker 3': '备稿演讲3',
         'ps3': '备稿演讲3',
         '备稿演讲3': '备稿演讲3',
+        '演讲者 3': '备稿演讲3',
         'speaker 4': '备稿演讲4',
         'ps4': '备稿演讲4',
         '备稿演讲4': '备稿演讲4',
+        '演讲者 4': '备稿演讲4',
         
         # Individual Evaluations
         'ie 1': '个评1',
         '个评1': '个评1',
+        '点评官 1': '个评1',
         'ie 2': '个评2',
         '个评2': '个评2',
+        '点评官 2': '个评2',
         'ie 3': '个评3',
         '个评3': '个评3',
+        '点评官 3': '个评3',
         'ie 4': '个评4',
         '个评4': '个评4',
+        '点评官 4': '个评4',
         
         # Others
         'president': '会长',
@@ -588,10 +545,13 @@ def parse_wechat_signup(text):
         '自由分享': '自由分享',
         'guest sharing': '嘉宾分享',
         '嘉宾分享': '嘉宾分享',
+        'workshop': '成长工作坊',
+        '成长工作坊': '成长工作坊',
+        '后备': '后备人员',
+        '后备人员': '后备人员',
     }
     
-    # Pattern 1: Role: Name format (e.g., "MM: Guiling/Sibley")
-    import re
+    # Pattern 1: Role: Name format (e.g., "MM: Guiling/Sibly")
     role_pattern = re.compile(r'^([^:：]+)[:：]\s*(.+)$')
     
     for line in lines:
@@ -608,17 +568,36 @@ def parse_wechat_signup(text):
             role_key = match.group(1).strip().lower()
             members_str = match.group(2).strip()
             
-            # Skip if no members or empty
-            if not members_str or members_str.lower() in ['tbd', '']:
+            # Skip if no members or empty/vacant
+            vacant_markers = ['【空缺', '【空位', '【待定', '【后续', '空缺', '空位', 'tbd', 'vacant', 'open']
+            if not members_str or any(m in members_str.lower() for m in vacant_markers):
                 continue
             
             # Map role key to standard role name
             standard_role = role_mapping.get(role_key)
             
             if not standard_role:
-                # Try to find partial match if exact match fails
+                # Try matching each space-separated token in role_key
+                for token in role_key.split():
+                    if token in role_mapping:
+                        standard_role = role_mapping[token]
+                        break
+            
+            if not standard_role:
+                # Try longest substring match from role_mapping keys
+                best_match = None
+                best_len = 0
                 for key, value in role_mapping.items():
-                    if key in role_key or role_key in key:
+                    if key in role_key and len(key) > best_len:
+                        best_match = value
+                        best_len = len(key)
+                if best_match:
+                    standard_role = best_match
+            
+            if not standard_role:
+                # Try to find partial match using word boundaries
+                for key, value in role_mapping.items():
+                    if re.search(r'\b' + re.escape(key) + r'\b', role_key):
                         standard_role = value
                         break
             
@@ -626,9 +605,14 @@ def parse_wechat_signup(text):
                 # Handle multiple members separated by /
                 members = [m.strip() for m in members_str.split('/') if m.strip()]
                 for member in members:
-                    registrations.append((standard_role, member))
+                    # Clean up annotations like （嘉宾）, (guest), （guest）
+                    member = re.sub(r'[（(]\s*嘉宾\s*[）)]', '', member)
+                    member = re.sub(r'[（(]\s*guest\s*[）)]', '', member)
+                    member = member.strip()
+                    if member and not any(m in member.lower() for m in vacant_markers):
+                        registrations.append((standard_role, member))
     
-    return registrations
+    return meeting_info, registrations
 
 @app.route('/meeting/create', methods=['GET', 'POST'])
 def create_meeting():
@@ -678,6 +662,135 @@ def create_meeting():
             conn.close()
     return render_template('create_meeting.html')
 
+@app.route('/create-from-post', methods=['GET', 'POST'])
+def create_from_post():
+    """从帖子内容创建会议并自动报名 - 两步流程：预览 → 确认创建"""
+    if request.method == 'POST':
+        action = request.form.get('action', 'parse')
+        
+        if action == 'confirm':
+            meeting_id = request.form.get('meeting_id', '').strip()
+            theme = request.form.get('theme', '').strip()
+            time_val = request.form.get('time', '').strip()
+            address = request.form.get('address', '').strip()
+            registrations_json = request.form.get('registrations', '[]')
+            
+            if not meeting_id:
+                flash('会议编号不能为空！', 'danger')
+                return redirect(url_for('create_from_post'))
+            
+            try:
+                registrations = json.loads(registrations_json)
+            except json.JSONDecodeError:
+                flash('报名数据解析失败，请重新粘贴帖子！', 'danger')
+                return redirect(url_for('create_from_post'))
+            
+            conn = get_db_connection()
+            try:
+                existing = conn.execute('SELECT id FROM meetings WHERE meeting_id = ?', 
+                                      (meeting_id,)).fetchone()
+                if existing:
+                    flash(f'会议 {meeting_id} 已存在！', 'danger')
+                    return redirect(url_for('create_from_post'))
+                
+                conn.execute("""
+                    INSERT INTO meetings (meeting_id, theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    meeting_id, theme, '',
+                    time_val, '', address, '', '', ''
+                ))
+                
+                meeting_db_id = conn.execute('SELECT id FROM meetings WHERE meeting_id = ?', 
+                                       (meeting_id,)).fetchone()['id']
+                
+                for role in DEFAULT_ROLES:
+                    conn.execute(
+                        "INSERT INTO meeting_roles (meeting_id, role_name) VALUES (?, ?)",
+                        (meeting_db_id, role['name_zh'])
+                    )
+                
+                registered_count = 0
+                skipped_roles = []
+                for role_name, member_name in registrations:
+                    try:
+                        role_exists = conn.execute(
+                            "SELECT 1 FROM meeting_roles WHERE meeting_id = ? AND role_name = ?",
+                            (meeting_db_id, role_name)
+                        ).fetchone()
+                        
+                        if not role_exists:
+                            skipped_roles.append(role_name)
+                            continue
+                        
+                        existing_reg = conn.execute(
+                            "SELECT 1 FROM registrations WHERE meeting_id = ? AND role_name = ?",
+                            (meeting_db_id, role_name)
+                        ).fetchone()
+                        
+                        if existing_reg:
+                            continue
+                        
+                        existing_member = conn.execute('SELECT * FROM members WHERE name = ?', 
+                                                    (member_name,)).fetchone()
+                        if not existing_member:
+                            conn.execute("INSERT INTO members (name, is_member) VALUES (?, ?)", 
+                                        (member_name, False))
+                        
+                        conn.execute(
+                            "INSERT INTO registrations (meeting_id, role_name, member_name) VALUES (?, ?, ?)",
+                            (meeting_db_id, role_name, member_name)
+                        )
+                        registered_count += 1
+                    except Exception as e:
+                        print(f"Error registering {member_name} for {role_name}: {e}")
+                
+                conn.commit()
+                
+                msg = f'会议创建成功！已自动报名 {registered_count} 个角色'
+                if skipped_roles:
+                    msg += f'（以下角色不在默认列表中已跳过：{", ".join(skipped_roles)}）'
+                flash(msg, 'success')
+                return redirect(url_for('meeting_detail', meeting_db_id=meeting_db_id))
+            
+            except sqlite3.IntegrityError as e:
+                flash(f'会议创建失败：{str(e)}', 'danger')
+            finally:
+                conn.close()
+            
+            return redirect(url_for('create_from_post'))
+        
+        else:
+            # Step 1: Parse the post and show preview
+            post_text = request.form.get('post_text', '').strip()
+            if not post_text:
+                flash('请粘贴帖子内容！', 'warning')
+                return redirect(url_for('create_from_post'))
+            
+            meeting_info, registrations = parse_wechat_signup(post_text)
+            
+            # Build parsing hints
+            hints = []
+            if not meeting_info.get('meeting_id'):
+                hints.append('未识别到会议编号（需含 #数字 格式，如 #982）')
+            if not meeting_info.get('time'):
+                hints.append('未识别到日期时间（需含 "2026年5月7日" 格式）')
+            if not meeting_info.get('address'):
+                hints.append('未识别到会议地址（需含 "地址：xxx" 或 "📍 地址：xxx" 格式）')
+            if not meeting_info.get('theme'):
+                hints.append('未识别到会议主题')
+            if not registrations:
+                hints.append('未识别到任何角色报名信息（需含 "角色：姓名" 格式）')
+            
+            return render_template('create_from_post.html',
+                preview=True,
+                meeting_info=meeting_info,
+                registrations=registrations,
+                hints=hints,
+                post_text=post_text)
+    
+    return render_template('create_from_post.html', preview=False)
+
 @app.route('/meeting/<int:meeting_db_id>/edit', methods=['GET', 'POST'])
 def edit_meeting(meeting_db_id):
     """编辑会议信息"""
@@ -688,6 +801,7 @@ def edit_meeting(meeting_db_id):
         return redirect(url_for('index'))
     
     if request.method == 'POST':
+        meeting_id = request.form['meeting_id']
         theme = request.form['theme']
         english_theme = request.form.get('english_theme', '')
         time = request.form['time']
@@ -712,9 +826,9 @@ def edit_meeting(meeting_db_id):
             workshop_duration = '30'
         
         conn.execute("""
-            UPDATE meetings SET theme = ?, english_theme = ?, time = ?, time_en = ?, address = ?, address_en = ?, fee_info = ?, fee_info_en = ?, workshop_speaker = ?, workshop_speaker_en = ?, workshop_zh = ?, workshop_en = ?, workshop_duration = ?
+            UPDATE meetings SET meeting_id = ?, theme = ?, english_theme = ?, time = ?, time_en = ?, address = ?, address_en = ?, fee_info = ?, fee_info_en = ?, workshop_speaker = ?, workshop_speaker_en = ?, workshop_zh = ?, workshop_en = ?, workshop_duration = ?
             WHERE id = ?
-        """, (theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en, workshop_speaker, workshop_speaker_en, workshop_zh, workshop_en, workshop_duration, meeting_db_id))
+        """, (meeting_id, theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en, workshop_speaker, workshop_speaker_en, workshop_zh, workshop_en, workshop_duration, meeting_db_id))
         conn.commit()
         flash('会议信息已更新！', 'success')
         conn.close()

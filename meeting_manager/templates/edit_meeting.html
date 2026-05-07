@@ -11,8 +11,8 @@
             <div class="card-body">
                 <form method="POST" action="{{ url_for('edit_meeting', meeting_db_id=meeting.id) }}">
                     <div class="mb-3">
-                        <label class="form-label">{% if lang == 'en' %}Meeting ID{% else %}会议编号{% endif %} <span class="text-muted">({% if lang == 'en' %}readonly{% else %}不可修改{% endif %})</span></label>
-                        <input type="text" class="form-control" value="{{ meeting.meeting_id }}" readonly>
+                        <label class="form-label">{% if lang == 'en' %}Meeting ID{% else %}会议编号{% endif %} <span class="text-muted">({% if lang == 'en' %}editable{% else %}可修改{% endif %})</span></label>
+                        <input type="text" class="form-control" name="meeting_id" value="{{ meeting.meeting_id }}" required>
                     </div>
                     
                     <div class="mb-3">

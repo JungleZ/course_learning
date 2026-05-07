@@ -11,8 +11,8 @@
             <div class="card-body">
                 <form method="POST" action="{{ url_for('create_meeting') }}">
                     <div class="mb-3">
-                        <label for="meeting_id" class="form-label">{% if lang == 'en' %}Meeting ID <span class="text-danger">*</span> (readonly){% else %}会议编号 <span class="text-danger">*</span> (不可修改){% endif %}</label>
-                        <input type="text" class="form-control" id="meeting_id" name="meeting_id" required readonly
+                        <label for="meeting_id" class="form-label">{% if lang == 'en' %}Meeting ID <span class="text-danger">*</span>{% else %}会议编号 <span class="text-danger">*</span>{% endif %}</label>
+                        <input type="text" class="form-control" id="meeting_id" name="meeting_id" required
                                placeholder="例如：20260501-FS-EN" value="20260501-FS-EN">
                         <div class="form-text">{% if lang == 'en' %}e.g. date+club+number{% else %}建议使用日期+俱乐部缩写+序号，如20260501-FS-EN{% endif %}</div>
                     </div>

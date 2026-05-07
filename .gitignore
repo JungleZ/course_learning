@@ -26,7 +26,12 @@ ENV/
 # Deployment scripts with credentials
 deploy.ps1
 deploy.sh
+deploy - *.sh
 meeting-manager.service
+
+# Backup and temporary files
+*.zip
+meeting_manager*.zip
 
 # OS
 Thumbs.db
