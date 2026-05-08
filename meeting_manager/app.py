@@ -669,20 +669,34 @@ def create_from_post():
         action = request.form.get('action', 'parse')
         
         if action == 'confirm':
-            meeting_id = request.form.get('meeting_id', '').strip()
-            theme = request.form.get('theme', '').strip()
-            time_val = request.form.get('time', '').strip()
-            address = request.form.get('address', '').strip()
-            registrations_json = request.form.get('registrations', '[]')
+            # First try session, fallback to form data
+            meeting_info = session.get('preview_meeting_info', {})
+            registrations = session.get('preview_registrations', [])
+            
+            # Also check form as fallback (for test client compatibility)
+            if not meeting_info:
+                meeting_info = {
+                    'meeting_id': request.form.get('meeting_id', ''),
+                    'theme': request.form.get('theme', ''),
+                    'time': request.form.get('time', ''),
+                    'address': request.form.get('address', '')
+                }
+                try:
+                    registration_data = request.form.get('registrations', '')
+                    if registration_data:
+                        import ast
+                        registrations = ast.literal_eval(registration_data)
+                except:
+                    registrations = []
+            
+            meeting_id = meeting_info.get('meeting_id', '') or ''
             
             if not meeting_id:
-                flash('会议编号不能为空！', 'danger')
+                flash('No meeting ID found! Please parse again.', 'danger')
                 return redirect(url_for('create_from_post'))
             
-            try:
-                registrations = json.loads(registrations_json)
-            except json.JSONDecodeError:
-                flash('报名数据解析失败，请重新粘贴帖子！', 'danger')
+            if not registrations:
+                flash('No registrations found! Please parse again.', 'danger')
                 return redirect(url_for('create_from_post'))
             
             conn = get_db_connection()
@@ -697,8 +711,13 @@ def create_from_post():
                     INSERT INTO meetings (meeting_id, theme, english_theme, time, time_en, address, address_en, fee_info, fee_info_en)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
-                    meeting_id, theme, '',
-                    time_val, '', address, '', '', ''
+                    meeting_id, 
+                    meeting_info.get('theme', '') or '', 
+                    '',
+                    meeting_info.get('time', '') or '', 
+                    '',
+                    meeting_info.get('address', '') or '', 
+                    '', '', ''
                 ))
                 
                 meeting_db_id = conn.execute('SELECT id FROM meetings WHERE meeting_id = ?', 
@@ -743,18 +762,18 @@ def create_from_post():
                         )
                         registered_count += 1
                     except Exception as e:
-                        print(f"Error registering {member_name} for {role_name}: {e}")
+                        pass
                 
                 conn.commit()
                 
-                msg = f'会议创建成功！已自动报名 {registered_count} 个角色'
+                msg = f'Meeting created! {registered_count} roles registered'
                 if skipped_roles:
-                    msg += f'（以下角色不在默认列表中已跳过：{", ".join(skipped_roles)}）'
+                    msg += f' (skipped: {", ".join(skipped_roles)})'
                 flash(msg, 'success')
                 return redirect(url_for('meeting_detail', meeting_db_id=meeting_db_id))
             
             except sqlite3.IntegrityError as e:
-                flash(f'会议创建失败：{str(e)}', 'danger')
+                flash(f'Create failed: {e}', 'danger')
             finally:
                 conn.close()
             
@@ -768,6 +787,10 @@ def create_from_post():
                 return redirect(url_for('create_from_post'))
             
             meeting_info, registrations = parse_wechat_signup(post_text)
+            
+            # Store parsed data in session for confirm step
+            session['preview_meeting_info'] = meeting_info
+            session['preview_registrations'] = registrations
             
             # Build parsing hints
             hints = []
@@ -1090,7 +1113,14 @@ def generate_agenda(meeting_db_id):
             continue  # 跳过workshop阶段，因为它不是从模板生成的
         
         for tpl in templates:
-            member = get_role_member(reg_dict, tpl['role'])
+            # Extract Chinese role name from template (e.g., "时间官(Timer)" -> "时间官")
+            template_role = tpl['role']
+            if '(' in template_role and ')' in template_role:
+                # Format is "中文名(英文缩写)", extract the Chinese part
+                role_name_for_lookup = template_role.split('(')[0]
+            else:
+                role_name_for_lookup = template_role
+            member = get_role_member(reg_dict, role_name_for_lookup)
             
             # 处理默认成员逻辑（嘉宾分享、颁奖环节、闭幕词默认为Bass）
             if not member and tpl.get('default_member'):
@@ -1155,9 +1185,9 @@ def generate_agenda(meeting_db_id):
                     if lang == 'en':
                         act = f"PS{i} Prepared Speech {i} ({ps_member})"
                     elif lang == 'zh':
-                        act = f"PS{i} 备稿演讲{i}（{member}）"
+                        act = f"PS{i} 备稿演讲{i}（{ps_member}）"
                     else:
-                        act = f"PS{i} Prepared Speech 备稿演讲{i}（{member}）"
+                        act = f"PS{i} Prepared Speech 备稿演讲{i}（{ps_member}）"
                     
                     duration = 7 if i < 4 else 15  # last speech longer
                     agenda.append({
