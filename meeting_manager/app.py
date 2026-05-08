@@ -388,11 +388,61 @@ def parse_wechat_signup(text):
         'fee_info_en': '',
     }
     
-    # Extract meeting number: GZ Galaxy 头马例会 #982 or #982
-    match = re.search(r'#\s*(\d+)', text)
-    if match:
-        meeting_info['meeting_id'] = match.group(1)
-        print(f"DEBUG: Found meeting_id: {match.group(1)}")
+    # Extract meeting info: use FIRST LINE as meeting_id (standard: 日期+俱乐部名称+#数字)
+    lines = text.strip().split('\n')
+    if lines:
+        first_line = lines[0].strip()
+        if first_line:
+            meeting_info['theme'] = first_line
+            meeting_info['english_theme'] = first_line
+            # Use first line as meeting_id (can be "GZ Galaxy 头马例会 #982")
+            meeting_info['meeting_id'] = first_line
+            print(f"DEBUG: Using first line as meeting_id: {first_line}")
+    
+    # Also try to extract date, club name, number for standard format
+    # Standard format: YYYYMMDD-ClubName-#number
+    date_match = re.search(r'(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日', text)
+    if date_match:
+        year, month, day = date_match.groups()
+        date_str = f"{year}{int(month):02d}{int(day):02d}"
+        meeting_info['time'] = f"{year}/{int(month):02d}/{int(day):02d}"
+        meeting_info['time_en'] = f"{year}/{int(month):02d}/{int(day):02d}"
+        
+        # Extract club name from first line
+        club_name = 'UnknownClub'
+        if lines:
+            first = lines[0].strip()
+            # Remove #数字 part
+            club = re.sub(r'#\s*\d+', '', first)
+            club = re.sub(r'\s+', ' ', club).strip()
+            if club:
+                # Simplify: take first word or two
+                parts = club.split()
+                if len(parts) >= 2:
+                    club_name = parts[0] + parts[1]
+                else:
+                    club_name = parts[0] if parts else 'UnknownClub'
+        
+        # Extract #数字
+        number = ''
+        match = re.search(r'#\s*(\d+)', text)
+        if match:
+            number = match.group(1)
+        
+        # Generate standard meeting_id: YYYYMMDD-ClubName-#number
+        if number:
+            standard_id = f"{date_str}-{club_name}-#{number}"
+        else:
+            standard_id = f"{date_str}-{club_name}"
+        
+        # Only use standard format if user didn't provide a clear first line
+        # OR always use standard format? User wants standard.
+        # But they also said first line = meeting_id.
+        # Compromise: if first line looks like a title (has 头马例会 or GZ Galaxy), use standard format.
+        if '头马例会' in first_line or 'Galaxy' in first_line or 'Toastmasters' in first_line:
+            meeting_info['meeting_id'] = standard_id
+            print(f"DEBUG: Generated standard meeting_id: {standard_id}")
+        # Otherwise keep first line as meeting_id
     
     # Extract date: 2026 年 5 月 7 日 周四
     match = re.search(r'(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日', text)
