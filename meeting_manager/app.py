@@ -276,6 +276,7 @@ def init_db():
             ('time_en', 'TEXT'),
             ('address_en', 'TEXT'),
             ('fee_info_en', 'TEXT'),
+            ('club_name', 'TEXT'),
             ('workshop_zh', 'TEXT'),
             ('workshop_en', 'TEXT'),
             ('workshop_duration', 'INTEGER DEFAULT 30'),
@@ -1046,12 +1047,18 @@ def meeting_detail(meeting_db_id):
             member_name = default_member
             is_default_assigned = True
         
+        # 默认分配的角色（如会长 Bass）默认是会员
+        if is_default_assigned:
+            is_member_val = True
+        else:
+            is_member_val = role['is_member']
+        
         roles_with_info.append({
             'role_name': role_name,
             'display_name': display_name,
             'description': role_desc,
             'member_name': member_name,
-            'is_member': role['is_member'],
+            'is_member': is_member_val,
             'member_only': member_only,
             'is_default_assigned': is_default_assigned,
             'has_registration': role['member_name'] is not None  # 标记是否有人真正报名
@@ -1077,6 +1084,15 @@ def meeting_detail(meeting_db_id):
     
     conn.close()
     return render_template('meeting_detail.html', meeting=meeting, roles=roles_with_info, registered_members=formatted_members)
+
+@app.route('/meeting/<int:meeting_db_id>/update_club_name', methods=['POST'])
+def update_club_name(meeting_db_id):
+    club_name = request.json.get('club_name', '').strip()
+    conn = get_db_connection()
+    conn.execute('UPDATE meetings SET club_name = ? WHERE id = ?', (club_name, meeting_db_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True, 'club_name': club_name})
 
 @app.route('/meeting/<int:meeting_db_id>/agenda')
 def generate_agenda(meeting_db_id):

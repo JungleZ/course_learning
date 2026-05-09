@@ -4,9 +4,13 @@
 <div class="container my-4 agenda-page" style="max-width:740px;">
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center no-print">
-            <h4 class="mb-0">
-                <i class="bi bi-calendar-check me-2"></i>{% set display_theme = meeting.english_theme if (lang == 'en' and meeting.english_theme) else meeting.theme %}{{ display_theme }}
-            </h4>
+            <div class="d-flex align-items-center">
+                <input type="text" id="clubNameInput" class="form-control form-control-sm bg-white text-dark fw-bold me-2" 
+                       value="{{ meeting.club_name or '佛山英文说' }}" 
+                       placeholder="{% if lang == 'en' %}Club Name{% else %}俱乐部名称{% endif %}"
+                       style="width:180px;" onblur="saveClubName()">
+                <span class="text-white-50" style="font-size:12px;">—— {% if lang == 'en' %}Agenda{% elif lang == 'both' %}议程 Agenda{% else %}议程{% endif %}</span>
+            </div>
             <div>
                 <a href="{{ url_for('meeting_detail', meeting_db_id=meeting.id) }}" class="btn btn-sm btn-light">
                     <i class="bi bi-arrow-left me-1"></i>{% if lang == 'en' %}Back{% elif lang == 'both' %}返回 Back{% else %}返回{% endif %}
@@ -17,42 +21,30 @@
             </div>
         </div>
         
-<!-- 打印时显示的标题 -->
         <div class="d-none d-print-block text-center py-2 border-bottom">
-            <h4 class="mb-1">{% set display_theme = meeting.english_theme if (lang == 'en' and meeting.english_theme) else meeting.theme %}{{ display_theme }}</h4>
+            <h5 class="mb-1 fw-bold" id="printClubName">{% if meeting.club_name %}{{ meeting.club_name }}{% else %}佛山英文说{% endif %}</h5>
             <small>{% if lang == 'en' and meeting.time_en %}{{ meeting.time_en }}{% else %}{{ meeting.time }}{% endif %} | {% if lang == 'en' and meeting.address_en %}{{ meeting.address_en }}{% else %}{{ meeting.address or '' }}{% endif %}</small>
         </div>
         
         <div class="card-body p-0">
-            <!-- 会议信息（支持多语言） -->
             <div class="p-3 border-bottom no-print">
                 <div class="row">
                     <div class="col-md-3">
-                        {% if lang == 'en' %}<strong>No.:</strong>
-                        {% elif lang == 'both' %}<strong>编号 No.:</strong>
-                        {% else %}<strong>编号：</strong>{% endif %}
-                        {{ meeting.meeting_id }}
+                        <strong>{% if lang == 'en' %}No.:{% else %}编号：{% endif %}</strong> {{ meeting.meeting_id }}
                     </div>
                     <div class="col-md-4">
-                        {% if lang == 'en' %}<strong>Time:</strong>
-                        {% elif lang == 'both' %}<strong>时间 Time:</strong>
-                        {% else %}<strong>时间：</strong>{% endif %}
+                        <strong>{% if lang == 'en' %}Time:{% else %}时间：{% endif %}</strong>
                         {% if lang == 'en' and meeting.time_en %}{{ format_time_24h(meeting.time_en) }}
-                        {% elif lang == 'both' %}{{ format_time_24h(meeting.time) }} / {{ format_time_24h(meeting.time_en) if meeting.time_en else 'TBD' }}
                         {% else %}{{ format_time_24h(meeting.time) }}{% endif %}
                     </div>
                     <div class="col-md-5">
-                        {% if lang == 'en' %}<strong>Venue:</strong>
-                        {% elif lang == 'both' %}<strong>地址 Venue:</strong>
-                        {% else %}<strong>地址：</strong>{% endif %}
+                        <strong>{% if lang == 'en' %}Venue:{% else %}地址：{% endif %}</strong>
                         {% if lang == 'en' and meeting.address_en %}{{ meeting.address_en }}
-                        {% elif lang == 'both' %}{{ meeting.address or 'TBD' }} / {{ meeting.address_en or 'TBD' }}
                         {% else %}{{ meeting.address or 'TBD' }}{% endif %}
                     </div>
                 </div>
             </div>
 
-            <!-- 公共表格：所有Phase共用一个表头 -->
             <div style="max-width:700px; margin:0 auto;">
             <table class="table table-hover table-sm table-bordered mb-0 agenda-table" style="table-layout:fixed;">
                 <colgroup>
@@ -63,10 +55,10 @@
                 </colgroup>
                 <thead class="table-dark">
                     <tr>
-                        <th class="text-center">{% if lang == 'en' %}Time{% elif lang == 'both' %}时间 Time{% else %}时间{% endif %}</th>
-                        <th>{% if lang == 'en' %}Activity{% elif lang == 'both' %}活动 Activity{% else %}活动{% endif %}</th>
-                        <th class="text-center">{% if lang == 'en' %}Min{% elif lang == 'both' %}分钟 Min{% else %}分钟{% endif %}</th>
-                        <th class="text-center">{% if lang == 'en' %}Participant{% elif lang == 'both' %}参与者 Participant{% else %}参与者{% endif %}</th>
+                        <th class="text-center">{% if lang == 'en' %}Time{% else %}时间{% endif %}</th>
+                        <th>{% if lang == 'en' %}Activity{% else %}活动{% endif %}</th>
+                        <th class="text-center">{% if lang == 'en' %}Min{% else %}分钟{% endif %}</th>
+                        <th class="text-center">{% if lang == 'en' %}Participant{% else %}参与者{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -79,7 +71,6 @@
                         {% endfor %}
                         
                         {% if phase_items %}
-                        <!-- Phase分隔行 -->
                         <tr class="phase-row">
                             <td colspan="4" class="{{ phase.color }} phase-header text-center fw-bold" style="border:none;">
                                 {% if lang == 'zh' %}{{ phase.name_zh }}
@@ -87,7 +78,6 @@
                                 {% else %}{{ phase.name_en }} / {{ phase.name_zh }}{% endif %}
                             </td>
                         </tr>
-                        <!-- Phase下的所有环节 -->
                         {% for item in phase_items %}
                         <tr class="{% if item.role == 'TBD' %}tbd-row{% endif %}">
                             <td class="time-cell text-center">{{ item.time }}</td>
@@ -153,107 +143,53 @@
 .tbd-row {
     background-color: #fff5f5;
 }
-
-/* A4打印优化 */
 @media print {
-    @page {
-        size: A4 portrait;
-        margin: 10mm;
-    }
-    body {
-        font-size: 10px;
-        margin: 0;
-        padding: 0;
-    }
-    .container, .agenda-page {
-        max-width: 100% !important;
-        width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-    .card {
-        box-shadow: none !important;
-        border: none !important;
-    }
-    .card-body {
-        padding: 0 !important;
-    }
-    .no-print {
-        display: none !important;
-    }
-    .agenda-table {
-        width: 100% !important;
-        table-layout: fixed !important;
-        border-collapse: collapse !important;
-    }
-    .agenda-table, .agenda-table td, .agenda-table th {
-        border: 1px solid #dee2e6 !important;
-    }
-    .agenda-table td, .agenda-table th {
-        padding: 2px 4px;
-        font-size: 9px;
-        line-height: 1.2;
-    }
-    .table-dark th {
-        background-color: #343a40 !important;
-        color: #fff !important;
-        font-size: 9px;
-        padding: 2px 4px;
-    }
-    .activity-cell {
-        padding-left: 4px !important;
-    }
-    /* Phase colors - explicit colors for print */
-    tr.phase-row td {
-        border: none !important;
-    }
-    .phase-header.bg-info {
-        background-color: #0dcaf0 !important;
-        color: #000 !important;
-        border: none !important;
-    }
-    .phase-header.bg-warning {
-        background-color: #ffc107 !important;
-        color: #000 !important;
-        border: none !important;
-    }
-    .phase-header.bg-success {
-        background-color: #198754 !important;
-        color: #fff !important;
-        border: none !important;
-    }
-    .phase-header.bg-primary {
-        background-color: #0d6efd !important;
-        color: #fff !important;
-        border: none !important;
-    }
-    .phase-header.bg-secondary {
-        background-color: #6c757d !important;
-        color: #fff !important;
-        border: none !important;
-    }
-    .phase-header.bg-dark {
-        background-color: #212529 !important;
-        color: #fff !important;
-        border: none !important;
-    }
-    .phase-header {
-        font-size: 10px;
-        padding: 3px 6px !important;
-        border: none !important;
-    }
-    .time-cell {
-        font-size: 9px;
-    }
-    .tbd-badge {
-        font-size: 8px;
-    }
-    .d-print-block {
-        display: block !important;
-    }
-    .d-print-none {
-        display: none !important;
-    }
+    @page { size: A4 portrait; margin: 10mm; }
+    body { font-size: 10px; margin: 0; padding: 0; }
+    .container, .agenda-page { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+    .card { box-shadow: none !important; border: none !important; }
+    .card-body { padding: 0 !important; }
+    .no-print { display: none !important; }
+    .agenda-table { width: 100% !important; table-layout: fixed !important; border-collapse: collapse !important; }
+    .agenda-table, .agenda-table td, .agenda-table th { border: 1px solid #dee2e6 !important; }
+    .agenda-table td, .agenda-table th { padding: 2px 4px; font-size: 9px; line-height: 1.2; }
+    .table-dark th { background-color: #343a40 !important; color: #fff !important; font-size: 9px; padding: 2px 4px; }
+    .activity-cell { padding-left: 4px !important; }
+    tr.phase-row td { border: none !important; }
+    .phase-header.bg-info { background-color: #0dcaf0 !important; color: #000 !important; border: none !important; }
+    .phase-header.bg-warning { background-color: #ffc107 !important; color: #000 !important; border: none !important; }
+    .phase-header.bg-success { background-color: #198754 !important; color: #fff !important; border: none !important; }
+    .phase-header.bg-primary { background-color: #0d6efd !important; color: #fff !important; border: none !important; }
+    .phase-header.bg-secondary { background-color: #6c757d !important; color: #fff !important; border: none !important; }
+    .phase-header.bg-dark { background-color: #212529 !important; color: #fff !important; border: none !important; }
+    .phase-header { font-size: 10px; padding: 3px 6px !important; border: none !important; }
+    .time-cell { font-size: 9px; }
+    .tbd-badge { font-size: 8px; }
+    .d-print-block { display: block !important; }
 }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function saveClubName() {
+    var input = document.getElementById('clubNameInput');
+    var clubName = input.value.trim();
+    var printClubName = document.getElementById('printClubName');
+    fetch('{{ url_for("update_club_name", meeting_db_id=meeting.id) }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({club_name: clubName})
+    });
+    if (printClubName) printClubName.textContent = clubName || '佛山英文说';
+}
+document.addEventListener('DOMContentLoaded', function() {
+    var input = document.getElementById('clubNameInput');
+    if (input) {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+        });
+    }
+});
+</script>
 {% endblock %}
