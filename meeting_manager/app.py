@@ -90,12 +90,19 @@ def parse_meeting_start_time(time_str):
         minute = int(match.group(2))
         return hour * 60 + minute
     
-    # 再次备选：匹配括号外的时间 19:30
-    match = re.search(r'(\d{1,2}):(\d{2})', time_str)
+    # Match 19:30 or 19: 30 with optional space
+    match = re.search(r'(\d{1,2}):\s*(\d{2})\s*[-–—]', time_str)
     if match:
         hour = int(match.group(1))
         minute = int(match.group(2))
-        # 只接受合理的小时范围 (7-23点)
+        return hour * 60 + minute
+    
+    # Match 19:30 or 19: 30 without dash
+    match = re.search(r'(\d{1,2}):\s*(\d{2})', time_str)
+    if match:
+        hour = int(match.group(1))
+        minute = int(match.group(2))
+        # Only accept reasonable hour range (7-23)
         if 7 <= hour <= 23:
             return hour * 60 + minute
     
@@ -357,8 +364,8 @@ def normalize_wechat_post_text(text):
     text = text.replace('：', ':').replace('；', ';').replace('，', ',')
     text = text.replace('（', '(').replace('）', ')')
     text = re.sub(r'[—–−]+', '-', text)
-    text = re.sub(r'\s*:\s*', ': ', text)
     text = re.sub(r'^[\-\*\u2022]\s*', '', text, flags=re.M)
+    text = re.sub(r' {2,}', ' ', text)
     
     return text.strip()
 
@@ -375,7 +382,7 @@ def parse_wechat_signup(text):
     text = normalize_wechat_post_text(text)
     lines = text.strip().split('\n')
     
-    # First, try to extract meeting info and registrations from GZ Galaxy format
+    # Initialize meeting_info dict
     meeting_info = {
         'meeting_id': '',
         'theme': '',
@@ -388,101 +395,74 @@ def parse_wechat_signup(text):
         'fee_info_en': '',
     }
     
-    # Extract meeting info: use FIRST LINE as meeting_id (standard: 日期+俱乐部名称+#数字)
     lines = text.strip().split('\n')
-    if lines:
-        first_line = lines[0].strip()
-        if first_line:
-            meeting_info['theme'] = first_line
-            meeting_info['english_theme'] = first_line
-            # Use first line as meeting_id (can be "GZ Galaxy 头马例会 #982")
-            meeting_info['meeting_id'] = first_line
-            print(f"DEBUG: Using first line as meeting_id: {first_line}")
     
-    # Also try to extract date, club name, number for standard format
-    # Standard format: YYYYMMDD-ClubName-#number
+    # Step 1: Extract MEETING_ID using standard format: YYYYMMDD-ClubName-#number
+    # Priority: date in text + club name from first line + #number
     date_match = re.search(r'(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日', text)
     if date_match:
         year, month, day = date_match.groups()
         date_str = f"{year}{int(month):02d}{int(day):02d}"
-        meeting_info['time'] = f"{year}/{int(month):02d}/{int(day):02d}"
-        meeting_info['time_en'] = f"{year}/{int(month):02d}/{int(day):02d}"
         
         # Extract club name from first line
         club_name = 'UnknownClub'
         if lines:
             first = lines[0].strip()
-            # Remove #数字 part
             club = re.sub(r'#\s*\d+', '', first)
             club = re.sub(r'\s+', ' ', club).strip()
-            if club:
-                # Simplify: take first word or two
-                parts = club.split()
-                if len(parts) >= 2:
-                    club_name = parts[0] + parts[1]
-                else:
-                    club_name = parts[0] if parts else 'UnknownClub'
+            parts = club.split()
+            if len(parts) >= 2:
+                club_name = parts[0] + parts[1]
+            elif parts:
+                club_name = parts[0]
         
-        # Extract #数字
-        number = ''
-        match = re.search(r'#\s*(\d+)', text)
-        if match:
-            number = match.group(1)
+        # Extract #number
+        number_match = re.search(r'#\s*(\d+)', text)
+        number = number_match.group(1) if number_match else ''
         
-        # Generate standard meeting_id: YYYYMMDD-ClubName-#number
+        # Generate standard meeting_id
         if number:
-            standard_id = f"{date_str}-{club_name}-#{number}"
+            meeting_info['meeting_id'] = f"{date_str}-{club_name}-#{number}"
         else:
-            standard_id = f"{date_str}-{club_name}"
+            meeting_info['meeting_id'] = f"{date_str}-{club_name}"
         
-        # Only use standard format if user didn't provide a clear first line
-        # OR always use standard format? User wants standard.
-        # But they also said first line = meeting_id.
-        # Compromise: if first line looks like a title (has 头马例会 or GZ Galaxy), use standard format.
-        if '头马例会' in first_line or 'Galaxy' in first_line or 'Toastmasters' in first_line:
-            meeting_info['meeting_id'] = standard_id
-            print(f"DEBUG: Generated standard meeting_id: {standard_id}")
-        # Otherwise keep first line as meeting_id
-    
-    # Extract date: 2026 年 5 月 7 日 周四
-    match = re.search(r'(\d{4})\s*年\s*(\d{1,2})\s*月\s*(\d{1,2})\s*日', text)
-    if match:
-        year, month, day = match.groups()
+        # Set date (without time yet)
         meeting_info['time'] = f"{year}/{int(month):02d}/{int(day):02d}"
         meeting_info['time_en'] = f"{year}/{int(month):02d}/{int(day):02d}"
+        print(f"DEBUG: Generated meeting_id: {meeting_info['meeting_id']}")
     
-    # Extract time: 19:30 ~ 21:30 (support both ASCII ~ and Unicode ～)
-    match = re.search(r'(\d{1,2}:\d{2})\s*[~～]\s*(\d{1,2}:\d{2})', text)
-    if match:
-        start_time = match.group(1)
-        end_time = match.group(2)
-        meeting_info['time'] += f" ({start_time}-{end_time})"
-        meeting_info['time_en'] += f" ({start_time}-{end_time})"
-    
-    # Extract theme from first line or "欢迎" line
-    lines = text.strip().split('\n')
+    # Step 2: Extract THEME from "主题:" line
     for line in lines:
         line = line.strip()
-        if line and not line.startswith('#') and '头马例会' in line:
-            meeting_info['theme'] = line
-            meeting_info['english_theme'] = line
-            break
-    if not meeting_info['theme']:
-        # Try to find "欢迎" line and use previous line
-        for i, line in enumerate(lines):
-            if '欢迎' in line and i > 0:
-                meeting_info['theme'] = lines[i-1].strip()
-                meeting_info['english_theme'] = lines[i-1].strip()
+        if line.startswith('主题:') or line.startswith('主题：'):
+            theme_content = re.split(r'[：:]', line, 1)[1].strip()
+            if theme_content:
+                meeting_info['theme'] = theme_content
+                meeting_info['english_theme'] = theme_content
                 break
     
-    # Extract address: 珠江新城 - 星辰大厦 1904
-    match = re.search(r'(?:会议地址|地址|地点)[：:]\s*(.+)', text)
-    if not match:
-        match = re.search(r'(珠江新城[^\n]+)', text)
-    if match:
-        address = match.group(1).strip()
-        meeting_info['address'] = address
-        meeting_info['address_en'] = address
+    # Step 3: Extract TIME range (19:30 ~ 21:30 or 19: 30 ~ 21: 30)
+    time_match = re.search(r'(\d{1,2}:\s*\d{2})\s*[~～]\s*(\d{1,2}:\s*\d{2})', text)
+    if time_match:
+        start_time = time_match.group(1).replace(' ', '')
+        end_time = time_match.group(2).replace(' ', '')
+        if meeting_info['time']:
+            meeting_info['time'] += f" ({start_time}-{end_time})"
+            meeting_info['time_en'] += f" ({start_time}-{end_time})"
+        else:
+            meeting_info['time'] = f"{start_time}-{end_time}"
+            meeting_info['time_en'] = f"{start_time}-{end_time}"
+    
+# Step 4: Extract ADDRESS (single line after the marker)
+    # Handle both formats: "📍 会议地址：xxx" and "会议地址：xxx"
+    addr_match = re.search(r'(?:📍\s*)?会议地址[：:]\s*([^\n]+)', text)
+    if not addr_match:
+        addr_match = re.search(r'📍\s*([^\n]+)', text)
+    if addr_match:
+        address = addr_match.group(1).strip()
+        if address:
+            meeting_info['address'] = address
+            meeting_info['address_en'] = address
     
     # Role mapping from Chinese/abbreviated/English to standard DB role names (name_zh from DEFAULT_ROLES)
     role_mapping = {
@@ -652,15 +632,16 @@ def parse_wechat_signup(text):
                         break
             
             if standard_role:
-                # Handle multiple members separated by /
                 members = [m.strip() for m in members_str.split('/') if m.strip()]
                 for member in members:
-                    # Clean up annotations like （嘉宾）, (guest), （guest）
-                    member = re.sub(r'[（(]\s*嘉宾\s*[）)]', '', member)
-                    member = re.sub(r'[（(]\s*guest\s*[）)]', '', member)
+                    is_guest = bool(re.search(r'[（(]\s*guest\s*[）)]', member, re.IGNORECASE))
+                    if not is_guest:
+                        is_guest = bool(re.search(r'[（(]\s*嘉宾\s*[）)]', member))
+                    member = re.sub(r'[（()]\s*嘉宾\s*[）()]*', '', member)
+                    member = re.sub(r'[（()]\s*guest\s*[）()]*', '', member, flags=re.IGNORECASE)
                     member = member.strip()
                     if member and not any(m in member.lower() for m in vacant_markers):
-                        registrations.append((standard_role, member))
+                        registrations.append((standard_role, member, is_guest))
     
     return meeting_info, registrations
 
@@ -770,8 +751,7 @@ def create_from_post():
                     '', '', ''
                 ))
                 
-                meeting_db_id = conn.execute('SELECT id FROM meetings WHERE meeting_id = ?', 
-                                       (meeting_id,)).fetchone()['id']
+                meeting_db_id = conn.execute('SELECT last_insert_rowid()').fetchone()[0]
                 
                 for role in DEFAULT_ROLES:
                     conn.execute(
@@ -781,7 +761,12 @@ def create_from_post():
                 
                 registered_count = 0
                 skipped_roles = []
-                for role_name, member_name in registrations:
+                for item in registrations:
+                    if len(item) == 3:
+                        role_name, member_name, is_guest = item
+                    else:
+                        role_name, member_name = item
+                        is_guest = False
                     try:
                         role_exists = conn.execute(
                             "SELECT 1 FROM meeting_roles WHERE meeting_id = ? AND role_name = ?",
@@ -802,9 +787,13 @@ def create_from_post():
                         
                         existing_member = conn.execute('SELECT * FROM members WHERE name = ?', 
                                                     (member_name,)).fetchone()
+                        is_member = 0 if is_guest else 1
                         if not existing_member:
                             conn.execute("INSERT INTO members (name, is_member) VALUES (?, ?)", 
-                                        (member_name, False))
+                                        (member_name, is_member))
+                        else:
+                            conn.execute("UPDATE members SET is_member = ? WHERE name = ?",
+                                        (is_member, member_name))
                         
                         conn.execute(
                             "INSERT INTO registrations (meeting_id, role_name, member_name) VALUES (?, ?, ?)",
