@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="container my-4 agenda-page">
+<div class="container my-4 agenda-page" style="max-width:740px;">
     <div class="card shadow-sm">
         <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center no-print">
             <h4 class="mb-0">
@@ -53,13 +53,20 @@
             </div>
 
             <!-- 公共表格：所有Phase共用一个表头 -->
-            <table class="table table-hover mb-0 agenda-table">
+            <div style="max-width:700px; margin:0 auto;">
+            <table class="table table-hover table-sm table-bordered mb-0 agenda-table" style="table-layout:fixed;">
+                <colgroup>
+                    <col style="width:20%">
+                    <col style="width:40%">
+                    <col style="width:20%">
+                    <col style="width:20%">
+                </colgroup>
                 <thead class="table-dark">
                     <tr>
-                        <th style="width:70px;">{% if lang == 'en' %}Time{% elif lang == 'both' %}时间 Time{% else %}时间{% endif %}</th>
+                        <th class="text-center">{% if lang == 'en' %}Time{% elif lang == 'both' %}时间 Time{% else %}时间{% endif %}</th>
                         <th>{% if lang == 'en' %}Activity{% elif lang == 'both' %}活动 Activity{% else %}活动{% endif %}</th>
-                        <th style="width:55px;">{% if lang == 'en' %}Min{% elif lang == 'both' %}分钟 Min{% else %}分钟{% endif %}</th>
-                        <th style="width:130px;">{% if lang == 'en' %}Participant{% elif lang == 'both' %}参与者 Participant{% else %}参与者{% endif %}</th>
+                        <th class="text-center">{% if lang == 'en' %}Min{% elif lang == 'both' %}分钟 Min{% else %}分钟{% endif %}</th>
+                        <th class="text-center">{% if lang == 'en' %}Participant{% elif lang == 'both' %}参与者 Participant{% else %}参与者{% endif %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -73,20 +80,20 @@
                         
                         {% if phase_items %}
                         <!-- Phase分隔行 -->
-                        <tr>
-                            <td colspan="4" class="{{ phase.color }} phase-header">
+                        <tr class="phase-row">
+                            <td colspan="4" class="{{ phase.color }} phase-header text-center fw-bold" style="border:none;">
                                 {% if lang == 'zh' %}{{ phase.name_zh }}
                                 {% elif lang == 'en' %}{{ phase.name_en }}
-                                {% else %}{{ phase.name_en }} {{ phase.name_zh }}{% endif %}
+                                {% else %}{{ phase.name_en }} / {{ phase.name_zh }}{% endif %}
                             </td>
                         </tr>
                         <!-- Phase下的所有环节 -->
                         {% for item in phase_items %}
                         <tr class="{% if item.role == 'TBD' %}tbd-row{% endif %}">
-                            <td class="time-cell">{{ item.time }}</td>
-                            <td>{{ item.activity }}</td>
+                            <td class="time-cell text-center">{{ item.time }}</td>
+                            <td class="activity-cell">{{ item.activity }}</td>
                             <td class="text-center">{% if item.duration > 0 %}{{ item.duration }}{% endif %}</td>
-                            <td>
+                            <td class="text-center">
                                 {% if item.role == 'TBD' %}
                                     <span class="tbd-badge">TBD</span>
                                 {% elif item.role == '' or item.role == '-' %}
@@ -101,6 +108,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
         
         <div class="card-footer text-muted no-print">
@@ -117,23 +125,30 @@
 <style>
 .agenda-table td, .agenda-table th {
     vertical-align: middle;
-    padding: 4px 8px;
-    font-size: 13px;
+    padding: 3px 5px;
+    font-size: 12px;
+    line-height: 1.3;
+}
+.agenda-table .activity-cell {
+    padding-left: 8px;
+    line-height: 1.4;
 }
 .phase-header {
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
     letter-spacing: 0.5px;
+    padding: 4px 8px !important;
 }
 .time-cell {
     font-family: 'Courier New', monospace;
     font-weight: 600;
     white-space: nowrap;
+    text-align: center;
 }
 .tbd-badge {
     color: #dc3545;
     font-weight: 600;
-    font-size: 11px;
+    font-size: 10px;
 }
 .tbd-row {
     background-color: #fff5f5;
@@ -143,20 +158,18 @@
 @media print {
     @page {
         size: A4 portrait;
-        margin: 12mm 10mm;
-    }
-    .no-print {
-        display: none !important;
+        margin: 10mm;
     }
     body {
         font-size: 10px;
         margin: 0;
         padding: 0;
     }
-    .container {
-        max-width: 100%;
-        padding: 0;
-        margin: 0;
+    .container, .agenda-page {
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
     .card {
         box-shadow: none !important;
@@ -165,24 +178,75 @@
     .card-body {
         padding: 0 !important;
     }
+    .no-print {
+        display: none !important;
+    }
+    .agenda-table {
+        width: 100% !important;
+        table-layout: fixed !important;
+        border-collapse: collapse !important;
+    }
+    .agenda-table, .agenda-table td, .agenda-table th {
+        border: 1px solid #dee2e6 !important;
+    }
     .agenda-table td, .agenda-table th {
         padding: 2px 4px;
         font-size: 9px;
-        line-height: 1.3;
+        line-height: 1.2;
+    }
+    .table-dark th {
+        background-color: #343a40 !important;
+        color: #fff !important;
+        font-size: 9px;
+        padding: 2px 4px;
+    }
+    .activity-cell {
+        padding-left: 4px !important;
+    }
+    /* Phase colors - explicit colors for print */
+    tr.phase-row td {
+        border: none !important;
+    }
+    .phase-header.bg-info {
+        background-color: #0dcaf0 !important;
+        color: #000 !important;
+        border: none !important;
+    }
+    .phase-header.bg-warning {
+        background-color: #ffc107 !important;
+        color: #000 !important;
+        border: none !important;
+    }
+    .phase-header.bg-success {
+        background-color: #198754 !important;
+        color: #fff !important;
+        border: none !important;
+    }
+    .phase-header.bg-primary {
+        background-color: #0d6efd !important;
+        color: #fff !important;
+        border: none !important;
+    }
+    .phase-header.bg-secondary {
+        background-color: #6c757d !important;
+        color: #fff !important;
+        border: none !important;
+    }
+    .phase-header.bg-dark {
+        background-color: #212529 !important;
+        color: #fff !important;
+        border: none !important;
     }
     .phase-header {
         font-size: 10px;
-        padding: 2px 4px !important;
+        padding: 3px 6px !important;
+        border: none !important;
     }
     .time-cell {
         font-size: 9px;
     }
     .tbd-badge {
         font-size: 8px;
-    }
-    .table-dark th {
-        font-size: 9px;
-        padding: 2px 4px;
     }
     .d-print-block {
         display: block !important;
