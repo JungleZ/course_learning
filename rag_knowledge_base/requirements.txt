@@ -1,0 +1,13 @@
+# 企业智能知识库问答助手
+# 技术栈：TF-IDF + FAISS + OpenAI兼容LLM
+# Python 3.7+ 兼容
+
+# 核心依赖
+scikit-learn>=1.0.0
+faiss-cpu>=1.7.0
+openai>=1.0.0
+gradio>=3.30.0
+
+# 文档解析（按需安装）
+pdfminer.six
+python-docx
