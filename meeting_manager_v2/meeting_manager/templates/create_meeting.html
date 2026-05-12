@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set lang = session.get('lang', 'zh') %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0"><i class="bi bi-calendar-plus me-2"></i>{% if lang == 'en' %}Create New Meeting{% else %}创建新会议{% endif %}</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('create_meeting') }}">
+                    <div class="mb-3">
+                        <label for="meeting_id" class="form-label">{% if lang == 'en' %}Meeting ID <span class="text-danger">*</span>{% else %}会议编号 <span class="text-danger">*</span>{% endif %}</label>
+                        <input type="text" class="form-control" id="meeting_id" name="meeting_id" required
+                               placeholder="例如：20260501-FS-EN" value="20260501-FS-EN">
+                        <div class="form-text">{% if lang == 'en' %}e.g. date+club+number{% else %}建议使用日期+俱乐部缩写+序号，如20260501-FS-EN{% endif %}</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="theme" class="form-label">{% if lang == 'en' %}Theme (Chinese) <span class="text-danger">*</span>{% else %}会议主题 <span class="text-danger">*</span>{% endif %}</label>
+                        <input type="text" class="form-control" id="theme" name="theme" required
+                               value="主题: 不被算法取代的你 - 致敬未来劳动者">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="english_theme" class="form-label">{% if lang == 'en' %}Theme (English) - Optional{% else %}英文主题 - 可选{% endif %}</label>
+                        <input type="text" class="form-control" id="english_theme" name="english_theme"
+                               placeholder="{% if lang == 'en' %}e.g. You Are Irreplaceable by AI{% else %}可选：填后可在英文模式下显示{% endif %}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="time" class="form-label">{% if lang == 'en' %}Time <span class="text-danger">*</span>{% else %}会议时间 <span class="text-danger">*</span>{% endif %}</label>
+                        <input type="text" class="form-control" id="time" name="time" required
+                               value="2026/5/1 周五晚（19:30-21:30，19:00 签到）">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="time_en" class="form-label">{% if lang == 'en' %}Time (English) - Optional{% else %}英文时间 - 可选{% endif %}</label>
+                        <input type="text" class="form-control" id="time_en" name="time_en"
+                               placeholder="{% if lang == 'en' %}e.g. 2026/5/1 Friday Evening (19:30-21:30, 19:00 Sign-in){% else %}可选：填后可在英文模式下显示{% endif %}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="address" class="form-label">{% if lang == 'en' %}Venue / Online Link{% else %}会议地址/线上链接{% endif %}</label>
+                        <input type="text" class="form-control" id="address" name="address"
+                               value="线上腾讯会议号：208844097">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="address_en" class="form-label">{% if lang == 'en' %}Venue (English) - Optional{% else %}英文地址 - 可选{% endif %}</label>
+                        <input type="text" class="form-control" id="address_en" name="address_en"
+                               placeholder="{% if lang == 'en' %}e.g. Tencent Meeting: 208844097{% else %}可选：填后可在英文模式下显示{% endif %}">
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="fee_info" class="form-label">{% if lang == 'en' %}Fee Info{% else %}费用说明{% endif %}</label>
+                        <textarea class="form-control" id="fee_info" name="fee_info" rows="3">✅ 头马会员免费
+✅ 嘉宾免费（开放部分角色给嘉宾；所有角色开放给会员）</textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="fee_info_en" class="form-label">{% if lang == 'en' %}Fee Info (English) - Optional{% else %}英文费用说明 - 可选{% endif %}</label>
+                        <textarea class="form-control" id="fee_info_en" name="fee_info_en" rows="3" placeholder="{% if lang == 'en' %}e.g. Members: Free, Guests: Free{% else %}可选：填后可在英文模式下显示{% endif %}"></textarea>
+                    </div>
+
+                    <hr class="my-4">
+                    <h5 class="mb-3">
+                        <i class="bi bi-mortarboard me-2"></i>
+                        {% if lang == 'en' %}Workshop (Optional){% elif lang == 'both' %}工作坊 Workshop (可选){% else %}工作坊（可选）{% endif %}
+                    </h5>
+                    
+                    <!-- Workshop Toggle Switch -->
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="workshop_enabled" name="workshop_enabled">
+                            <label class="form-check-label" for="workshop_enabled">
+                                {% if lang == 'en' %}Enable Workshop{% elif lang == 'both' %}启用工作坊 Enable Workshop{% else %}启用工作坊{% endif %}
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Workshop Details (Hidden by default) -->
+                    <div id="workshop_fields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="workshop_speaker" class="form-label">
+                                {% if lang == 'en' %}Workshop Speaker <span class="text-danger">*</span>{% elif lang == 'both' %}主讲人 Workshop Speaker <span class="text-danger">*</span>{% else %}主讲人 <span class="text-danger">*</span>{% endif %}
+                            </label>
+                            <input type="text" class="form-control" id="workshop_speaker" name="workshop_speaker"
+                                   placeholder="{% if lang == 'en' %}e.g. John Doe{% else %}例如：张三{% endif %}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="workshop_speaker_en" class="form-label">{% if lang == 'en' %}Workshop Speaker (English) - Optional{% else %}主讲人英文名 - 可选{% endif %}</label>
+                            <input type="text" class="form-control" id="workshop_speaker_en" name="workshop_speaker_en"
+                                   placeholder="{% if lang == 'en' %}e.g. John Doe{% else %}可选：填后可在英文模式下显示{% endif %}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="workshop_zh" class="form-label">{% if lang == 'en' %}Workshop Name (Chinese){% else %}工作坊名称{% endif %}</label>
+                            <input type="text" class="form-control" id="workshop_zh" name="workshop_zh"
+                                   placeholder="{% if lang == 'en' %}e.g. 演讲技巧提升工作坊{% else %}例如：演讲技巧提升工作坊{% endif %}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="workshop_en" class="form-label">{% if lang == 'en' %}Workshop Name (English) - Optional{% else %}工作坊英文名称 - 可选{% endif %}</label>
+                            <input type="text" class="form-control" id="workshop_en" name="workshop_en"
+                                   placeholder="{% if lang == 'en' %}e.g. Public Speaking Skills Workshop{% else %}可选：填后可在英文模式下显示{% endif %}">
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="workshop_duration" class="form-label">{% if lang == 'en' %}Workshop Duration (minutes){% else %}工作坊时长（分钟）{% endif %}</label>
+                            <input type="number" class="form-control" id="workshop_duration" name="workshop_duration" 
+                                   value="30" min="10" max="120">
+                            <div class="form-text">{% if lang == 'en' %}Default: 30 minutes{% else %}默认：30分钟{% endif %}</div>
+                        </div>
+                    </div>
+
+                    <script>
+                        // Toggle workshop fields visibility
+                        document.getElementById('workshop_enabled').addEventListener('change', function() {
+                            document.getElementById('workshop_fields').style.display = this.checked ? 'block' : 'none';
+                        });
+                    </script>
+
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary me-md-2">
+                            <i class="bi bi-arrow-left me-1"></i>{% if lang == 'en' %}Back{% else %}返回列表{% endif %}
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-check-lg me-1"></i>{% if lang == 'en' %}Create{% else %}创建会议{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer text-muted">
+                <small>创建会议后将自动添加所有默认角色（包括备稿演讲最多4个、个评最多4个及其他常见角色）</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

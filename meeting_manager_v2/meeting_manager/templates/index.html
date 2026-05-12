@@ -1,0 +1,105 @@
+{% set lang = session.get('lang', 'zh') %}
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Beta 提示 -->
+<div class="alert alert-info alert-dismissible fade show" role="alert">
+    <div class="d-flex align-items-start">
+        <i class="bi bi-flask fs-4 me-3"></i>
+        <div class="flex-grow-1">
+            <strong>
+                {% if lang == 'en' %}
+                    🎉 Welcome to Beta Version!
+                {% elif lang == 'both' %}
+                    🎉 欢迎使用 Beta 版本！ Welcome to Beta Version!
+                {% else %}
+                    🎉 欢迎使用 Beta 版本！
+                {% endif %}
+            </strong>
+            <p class="mb-2 mt-2">
+                {% if lang == 'en' %}
+                    This is a beta version. If you have any questions or suggestions, we're here to help!
+                {% elif lang == 'both' %}
+                    这是测试版本。如果您有任何问题或建议，我们随时为您提供帮助！
+                    <br>This is a beta version. If you have any questions or suggestions, we're here to help!
+                {% else %}
+                    这是测试版本。如果您有任何问题或建议，我们随时为您提供帮助！
+                {% endif %}
+            </p>
+            <a href="{{ url_for('help') }}" class="btn btn-sm btn-outline-primary">
+                <i class="bi bi-question-circle me-1"></i>
+                {% if lang == 'en' %}View Help Center{% elif lang == 'both' %}查看帮助中心 View Help Center{% else %}查看帮助中心{% endif %}
+            </a>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>
+        {% if lang == 'en' %}<i class="bi bi-calendar-check me-2"></i>Meeting List
+        {% elif lang == 'both' %}<i class="bi bi-calendar-check me-2"></i>会议列表 Meeting List
+        {% else %}<i class="bi bi-calendar-check me-2"></i>会议列表{% endif %}
+    </h2>
+    <div>
+        <a href="{{ url_for('export_all_meetings') }}" class="btn btn-success me-2" target="_blank">
+            {% if lang == 'en' %}<i class="bi bi-download me-1"></i>Export Stats
+            {% elif lang == 'both' %}<i class="bi bi-download me-1"></i>导出角色统计 Export Stats
+            {% else %}<i class="bi bi-download me-1"></i>导出角色统计{% endif %}
+        </a>
+        <a href="{{ url_for('create_meeting') }}" class="btn btn-primary">
+            {% if lang == 'en' %}<i class="bi bi-plus-lg me-1"></i>New Meeting
+            {% elif lang == 'both' %}<i class="bi bi-plus-lg me-1"></i>创建新会议 New Meeting
+            {% else %}<i class="bi bi-plus-lg me-1"></i>创建新会议{% endif %}
+        </a>
+    </div>
+</div>
+
+{% if meetings %}
+<div class="row">
+    {% for meeting in meetings %}
+    {% if lang == 'en' and meeting.english_theme %}
+        {% set display_theme = meeting.english_theme %}
+    {% elif lang == 'both' %}
+        {% set display_theme = meeting.theme ~ ' / ' ~ (meeting.english_theme or '') %}
+    {% else %}
+        {% set display_theme = meeting.theme %}
+    {% endif %}
+    <div class="col-md-4 mb-4">
+        <div class="card meeting-card h-100 shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">{{ display_theme }}</h5>
+            </div>
+            <div class="card-body">
+                <p class="card-text">
+                    <i class="bi bi-upc-scan me-1"></i><strong>{% if lang == 'en' %}No.:{% elif lang == 'both' %}编号 No.:{% else %}编号：{% endif %}</strong>{{ meeting.meeting_id }}<br>
+                    <i class="bi bi-clock me-1"></i><strong>{% if lang == 'en' %}Time:{% elif lang == 'both' %}时间 Time:{% else %}时间：{% endif %}</strong>
+                    {% if lang == 'en' and meeting.time_en %}{{ format_time_24h(meeting.time_en) }}
+                    {% elif lang == 'both' %}{{ format_time_24h(meeting.time) }} / {{ format_time_24h(meeting.time_en) if meeting.time_en else 'TBD' }}
+                    {% else %}{{ format_time_24h(meeting.time) }}{% endif %}<br>
+                    {% if meeting.address or meeting.address_en %}
+                    <i class="bi bi-geo-alt me-1"></i><strong>{% if lang == 'en' %}Venue:{% elif lang == 'both' %}地址 Venue:{% else %}地址：{% endif %}</strong>
+                    {% if lang == 'en' and meeting.address_en %}{{ meeting.address_en }}
+                    {% elif lang == 'both' %}{{ meeting.address or 'TBD' }} / {{ meeting.address_en or 'TBD' }}
+                    {% else %}{{ meeting.address }}{% endif %}<br>
+                    {% endif %}
+                </p>
+            </div>
+            <div class="card-footer bg-transparent">
+                <a href="{{ url_for('meeting_detail', meeting_db_id=meeting.id) }}" class="btn btn-outline-primary w-100">
+                    {% if lang == 'en' %}<i class="bi bi-eye me-1"></i>View & Register
+                    {% elif lang == 'both' %}<i class="bi bi-eye me-1"></i>查看详情 & 报名 View & Register
+                    {% else %}<i class="bi bi-eye me-1"></i>查看详情 & 报名{% endif %}
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info text-center" role="alert">
+    {% if lang == 'en' %}<i class="bi bi-info-circle me-2"></i>No meetings yet. Click above to create one!
+    {% else %}<i class="bi bi-info-circle me-2"></i>暂无会议，点击上方按钮创建第一个会议吧！{% endif %}
+</div>
+{% endif %}
+{% endblock %}

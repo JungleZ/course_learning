@@ -1,0 +1,5 @@
+Phase init: Found timer-related role, length=13
+  Contains '(' : True
+  Contains ')' : True
+  Chinese part: '时间官' (len=3)
+  Abbrev part: 'Timer' (len=5)

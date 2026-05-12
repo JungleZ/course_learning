@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set lang = session.get('lang', 'zh') %}
+{% if lang == 'en' and meeting.english_theme %}
+    {% set display_theme = meeting.english_theme %}
+{% elif lang == 'both' %}
+    {% set display_theme = meeting.theme ~ ' / ' ~ (meeting.english_theme or '') %}
+{% else %}
+    {% set display_theme = meeting.theme %}
+{% endif %}
+<div class="row">
+    <!-- 会议基本信息 -->
+    <div class="col-lg-4 mb-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0"><i class="bi bi-calendar-event me-2"></i>{% if lang == 'en' %}Meeting Details{% else %}会议详情{% endif %}</h4>
+            </div>
+            <div class="card-body">
+                <h5 class="card-title">{{ display_theme }}</h5>
+                <p class="card-text">
+                    <i class="bi bi-upc-scan me-1"></i><strong>{% if lang == 'en' %}No.:{% elif lang == 'both' %}编号 No.:{% else %}编号：{% endif %}</strong>{{ meeting.meeting_id }}<br>
+                    <i class="bi bi-clock me-1"></i><strong>{% if lang == 'en' %}Time:{% elif lang == 'both' %}时间 Time:{% else %}时间：{% endif %}</strong>
+                    {% if lang == 'en' and meeting.time_en %}{{ format_time_24h(meeting.time_en) }}
+                    {% elif lang == 'both' %}{{ format_time_24h(meeting.time) }} / {{ format_time_24h(meeting.time_en) if meeting.time_en else 'TBD' }}
+                    {% else %}{{ format_time_24h(meeting.time) }}{% endif %}<br>
+                    {% if meeting.address or meeting.address_en %}
+                    <i class="bi bi-geo-alt me-1"></i><strong>{% if lang == 'en' %}Venue:{% elif lang == 'both' %}地址 Venue:{% else %}地址：{% endif %}</strong>
+                    {% if lang == 'en' and meeting.address_en %}{{ meeting.address_en }}
+                    {% elif lang == 'both' %}{{ meeting.address or 'TBD' }} / {{ meeting.address_en or 'TBD' }}
+                    {% else %}{{ meeting.address }}{% endif %}<br>
+                    {% endif %}
+                    {% if meeting.fee_info or meeting.fee_info_en %}
+                    <i class="bi bi-cash me-1"></i><strong>{% if lang == 'en' %}Fee:{% elif lang == 'both' %}费用 Fee:{% else %}费用：{% endif %}</strong><br>
+                    <small>
+                        {% if lang == 'en' and meeting.fee_info_en %}{{ meeting.fee_info_en|replace('\n', '<br>')|safe }}
+                        {% elif lang == 'both' %}{{ meeting.fee_info|replace('\n', '<br>')|safe }}<br><em>{{ meeting.fee_info_en|replace('\n', '<br>')|safe }}</em>
+                        {% else %}{{ meeting.fee_info|replace('\n', '<br>')|safe }}{% endif %}
+                    </small>
+                    {% endif %}
+                </p>
+                <div class="d-flex gap-2 mb-2">
+                    <a href="{{ url_for('edit_meeting', meeting_db_id=meeting.id) }}" class="btn btn-warning btn-sm">
+                        <i class="bi bi-pencil me-1"></i>{% if lang == 'en' %}Edit{% elif lang == 'both' %}编辑 Edit{% else %}编辑{% endif %}
+                    </a>
+                    <a href="{{ url_for('export_meeting_csv', meeting_db_id=meeting.id) }}" class="btn btn-success btn-sm" target="_blank">
+                        <i class="bi bi-download me-1"></i>CSV
+                    </a>
+                </div>
+                <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>{% if lang == 'en' %}Back{% elif lang == 'both' %}返回 Back{% else %}返回列表{% endif %}
+                </a>
+            </div>
+        </div>
+        
+        <!-- 已报名人员列表 -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-people me-2"></i>{% if lang == 'en' %}Registered ({{ registered_members|length }}){% elif lang == 'both' %}已报名人员 Registered ({{ registered_members|length }}){% else %}已报名人员 ({{ registered_members|length }}){% endif %}</h5>
+            </div>
+            <div class="card-body p-0">
+                {% if registered_members %}
+                <ul class="list-group list-group-flush">
+                    {% for member in registered_members %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ member.member_name }}
+                        {% if member.is_member %}
+                        <span class="badge bg-primary rounded-pill">{% if lang == 'en' %}Member{% elif lang == 'both' %}会员 Member{% else %}会员{% endif %}</span>
+                        {% else %}
+                        <span class="badge bg-secondary rounded-pill">{% if lang == 'en' %}Guest{% elif lang == 'both' %}嘉宾 Guest{% else %}嘉宾{% endif %}</span>
+                        {% endif %}
+                        <small class="text-muted">{{ member.roles }}</small>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="card-body text-center text-muted">
+                    <i class="bi bi-person-plus"></i> {% if lang == 'en' %}No registrations yet{% elif lang == 'both' %}暂无人员报名 No registrations yet{% else %}暂无人员报名{% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- 生成Agenda按钮 -->
+        <div class="card shadow-sm mt-4">
+            <div class="card-body text-center">
+                <a href="{{ url_for('generate_agenda', meeting_db_id=meeting.id) }}" class="btn btn-success btn-lg w-100 mb-2">
+                    <i class="bi bi-calendar-check me-2"></i>{% if lang == 'en' %}6-Phase Agenda{% elif lang == 'both' %}6阶段议程{% else %}生成6阶段会议议程{% endif %}
+                </a>
+                <a href="{{ url_for('generate_agenda_poster', meeting_db_id=meeting.id) }}" class="btn btn-danger btn-lg w-100">
+                    <i class="bi bi-award me-2"></i>{% if lang == 'en' %}Agenda Poster{% elif lang == 'both' %}海报议程{% else %}生成海报议程{% endif %}
+                </a>
+                <div class="form-text mt-2">
+                    {% if lang == 'en' %}Auto-generate complete agenda with sign-in, table topics, speeches, break, evaluation, closing
+                    {% elif lang == 'both' %}基于已报名角色自动生成包含签到、即兴演讲、备稿演讲、休息、点评、闭幕的完整议程<br>Auto-generate complete agenda with sign-in, table topics, speeches, break, evaluation, closing
+                    {% else %}基于已报名角色自动生成包含签到、即兴演讲、备稿演讲、休息、点评、闭幕的完整议程{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 角色列表及报名 -->
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h4 class="mb-0"><i class="bi bi-list-check me-2"></i>{% if lang == 'en' %}Roles & Registration{% elif lang == 'both' %}角色列表 & 报名 Roles & Registration{% else %}角色列表 & 报名{% endif %}</h4>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th>{% if lang == 'en' %}Role{% elif lang == 'both' %}角色 Role{% else %}角色名称{% endif %}</th>
+                                <th>{% if lang == 'en' %}Description{% elif lang == 'both' %}描述 Description{% else %}角色描述{% endif %}</th>
+                                <th>{% if lang == 'en' %}Status{% elif lang == 'both' %}状态 Status{% else %}状态{% endif %}</th>
+                                <th>{% if lang == 'en' %}Registrant{% elif lang == 'both' %}报名人 Registrant{% else %}报名人{% endif %}</th>
+                                <th>{% if lang == 'en' %}Action{% elif lang == 'both' %}操作 Action{% else %}操作{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for role in roles %}
+                            <tr{% if role.is_default_assigned and not role.has_registration %} class="table-light"{% endif %}>
+                                <td><strong>{{ role.display_name }}</strong>{% if role.member_only %}<span class="badge bg-warning ms-1" title="{% if lang == 'en' %}Members only{% else %}仅限会员报名{% endif %}">🔒</span>{% endif %}{% if role.is_default_assigned and not role.has_registration %}<span class="badge bg-info ms-1" title="{% if lang == 'en' %}Default assigned (can be overridden){% else %}默认分配（可被覆盖）{% endif %}">⭐</span>{% endif %}</td>
+                                <td><small class="text-muted" title="{{ role.description }}">{{ role.description[:20] }}...{% if not role.description %}{% if lang == 'en' %}No description{% else %}暂无描述{% endif %}{% endif %}</small></td>
+                                <td>
+                                    {% if role.member_name %}
+                                        {% if role.is_default_assigned and not role.has_registration %}
+                                        <span class="badge bg-info">{% if lang == 'en' %}Default Assigned{% else %}默认分配{% endif %}</span>
+                                        {% else %}
+                                        <span class="badge bg-success">{% if lang == 'en' %}Registered{% else %}已报名{% endif %}</span>
+                                        {% endif %}
+                                    {% else %}
+                                    <span class="badge bg-secondary">{% if lang == 'en' %}Available{% else %}待报名{% endif %}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if role.member_name %}
+                                    {{ role.member_name }}
+                                    {% if role.is_member %}
+                                    <span class="badge bg-primary ms-1">{% if lang == 'en' %}Member{% else %}会员{% endif %}</span>
+                                    {% else %}
+                                    <span class="badge bg-secondary ms-1">{% if lang == 'en' %}Guest{% else %}嘉宾{% endif %}</span>
+                                    {% endif %}
+                                    {% if role.is_default_assigned and not role.has_registration %}
+                                    <small class="text-muted ms-2">({% if lang == 'en' %}default{% else %}默认{% endif %})</small>
+                                    {% endif %}
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if not role.has_registration %}
+                                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" 
+                                            data-bs-target="#registerForm{{ loop.index }}" aria-expanded="false">
+                                        <i class="bi bi-pencil me-1"></i>{% if lang == 'en' %}Register{% else %}报名{% endif %}{% if role.is_default_assigned %} ({% if lang == 'en' %}Override{% else %}覆盖{% endif %}){% endif %}
+                                    </button>
+                                    <div class="collapse mt-2" id="registerForm{{ loop.index }}">
+                                        <form method="POST" action="{{ url_for('register') }}">
+                                            <input type="hidden" name="meeting_db_id" value="{{ meeting.id }}">
+                                            <input type="hidden" name="role_name" value="{{ role.role_name }}">
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" name="member_name" 
+                                                       placeholder="{% if lang == 'en' %}Enter name{% else %}输入姓名{% endif %}" required>
+                                                <div class="input-group-text">
+                                                    <div class="form-check mb-0">
+                                                        <input class="form-check-input" type="checkbox" 
+                                                               name="is_member" value="1" id="memberCheck{{ loop.index }}">
+                                                        <label class="form-check-label" for="memberCheck{{ loop.index }}">
+                                                            {% if lang == 'en' %}Member{% else %}会员{% endif %}
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <button class="btn btn-primary" type="submit">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                    {% else %}
+                                    <span class="text-muted small">{% if lang == 'en' %}Locked{% else %}已锁定{% endif %}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="card-footer text-muted">
+                <small><i class="bi bi-info-circle me-1"></i>{% if lang == 'en' %}One person per role; one role per person. 🔒 roles are for members only.{% else %}同一角色同一会议只能被一人报名；同一人同一会议只能报名一个角色🔒仅限会员{% endif %}</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var alerts = document.querySelectorAll('.alert');
+    alerts.forEach(function(alert) {
+        setTimeout(function() {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 3000);
+    });
+});
+</script>
+{% endblock %}

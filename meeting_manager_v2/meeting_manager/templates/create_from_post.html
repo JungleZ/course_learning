@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block content %}
+{% set lang = session.get('lang', 'zh') %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-file-earmark-text me-2"></i>
+                    {% if lang == 'en' %}Create Meeting from Post{% else %}从帖子创建会议{% endif %}
+                </h4>
+            </div>
+            <div class="card-body">
+                {% if not preview %}
+                {# ===== Step 1: Paste post content ===== #}
+                <form method="POST" action="{{ url_for('create_from_post') }}">
+                    <input type="hidden" name="action" value="parse">
+                    <div class="mb-3">
+                        <label for="post_text" class="form-label">
+                            {% if lang == 'en' %}Paste Meeting Post{% else %}粘贴会议帖子内容{% endif %} <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control" id="post_text" name="post_text" rows="15" 
+                                  placeholder="{% if lang == 'en' %}Paste Toastmasters meeting post here...{% else %}粘贴头马例会帖子，例如：
+
+GZ Galaxy 头马例会 #982
+📅 会议日期：2026 年 5 月 7 日 周四
+⏰ 会议时间：19:30 ~ 21:30
+📍 会议地址：珠江新城 - 星辰大厦 1904
+会议主席 MM：Christina Fang
+会场官 SAA：Scott Peng
+时间官 Timer：Mei
+...{% endif %}" required></textarea>
+                        <div class="form-text">
+                            {% if lang == 'en' %}Supports Toastmasters meeting post format. Meeting number, date, address and registrations will be auto-parsed, then you can preview and confirm.{% else %}支持头马例会帖子格式。将自动解析会议编号、日期、地址和报名信息，解析后可预览确认再创建。{% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{{ url_for('index') }}" class="btn btn-secondary me-md-2">
+                            <i class="bi bi-arrow-left me-1"></i>{% if lang == 'en' %}Back{% else %}返回列表{% endif %}
+                        </a>
+                        <button type="submit" class="btn btn-info">
+                            <i class="bi bi-search me-1"></i>
+                            {% if lang == 'en' %}Parse & Preview{% else %}解析并预览{% endif %}
+                        </button>
+                    </div>
+                </form>
+
+                {% else %}
+                {# ===== Step 2: Preview parsed results ===== #}
+                
+                {# Enhanced feedback section #}
+                {% if hints or meeting_info.meeting_id %}
+                <div class="mb-4">
+                    {% if hints %}
+                    <div class="alert alert-warning">
+                        <h5 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>
+                            {% if lang == 'en' %}Parsing Notes{% else %}解析说明{% endif %}
+                        </h5>
+                        <p class="mb-0">
+                            {% for hint in hints %}
+                            <i class="bi bi-dash me-1"></i> {{ hint }}<br>
+                            {% endfor %}
+                        </p>
+                    </div>
+                    {% endif %}
+                    
+                    {% if meeting_info.meeting_id %}
+                    <div class="alert alert-success">
+                        <h5 class="alert-heading"><i class="bi bi-check-circle me-2"></i>
+                            {% if lang == 'en' %}Parsing Successful{% else %}解析成功{% endif %}
+                        </h5>
+                        <p class="mb-0">
+                            {% if lang == 'en' %}
+                                Key meeting information has been extracted. Please review below and confirm to create.
+                            {% else %}
+                                关键会议信息已提取。请查看下方预览并确认创建。
+                            {% endif %}
+                        </p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {# Meeting info preview card - enhanced #}
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-primary text-white py-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-calendar-event me-2 fs-5"></i>
+                            <h5 class="mb-0">
+                                {% if lang == 'en' %}Meeting Information Preview{% else %}会议信息预览{% endif %}
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <h6 class="text-muted">
+                                        {% if lang == 'en' %}Meeting ID{% else %}会议编号{% endif %}
+                                    </h6>
+                                    <p class="fs-5 fw-bold mb-0">{{ meeting_info.meeting_id or '-' }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <h6 class="text-muted">
+                                        {% if lang == 'en' %}Theme{% else %}会议主题{% endif %}
+                                    </h6>
+                                    <p class="fs-5 fw-bold mb-0">{{ meeting_info.theme or '-' }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <h6 class="text-muted">
+                                        {% if lang == 'en' %}Date/Time{% else %}日期时间{% endif %}
+                                    </h6>
+                                    <p class="fs-5 fw-bold mb-0">{{ meeting_info.time or '-' }}</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <h6 class="text-muted">
+                                        {% if lang == 'en' %}Address{% else %}会议地址{% endif %}
+                                    </h6>
+                                    <p class="fs-5 fw-bold mb-0">{{ meeting_info.address or '-' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {# Registrations preview card - enhanced #}
+                {% if registrations %}
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header bg-success text-white py-3">
+                        <div class="d-flex align-items-center">
+                            <i class="bi bi-people me-2 fs-5"></i>
+                            <h5 class="mb-0">
+                                {% if lang == 'en' %}
+                                    Registrations Preview ({{ registrations|length }})
+                                {% else %}
+                                    报名信息预览（{{ registrations|length }} 人）
+                                {% endif %}
+                            </h5>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:50px;" class="text-center">#</th>
+                                        <th>{% if lang == 'en' %}Role{% else %}角色{% endif %}</th>
+                                        <th>{% if lang == 'en' %}Name{% else %}姓名{% endif %}</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in registrations %}
+                                    <tr>
+                                        <td class="text-center fw-medium">{{ loop.index }}</td>
+                                        <td>
+                                            <span class="badge bg-primary rounded-pill px-3 py-2">{{ item[0] }}</span>
+                                        </td>
+                                        <td class="fw-medium">
+                                            {{ item[1] }}
+                                            {% if item|length > 2 and item[2] %}
+                                            <span class="badge bg-warning text-dark ms-1">嘉宾</span>
+                                            {% else %}
+                                            <span class="badge bg-info ms-1">会员</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                {# Action buttons - enhanced #}
+                <form method="POST" action="{{ url_for('create_from_post') }}">
+                    <input type="hidden" name="action" value="confirm">
+                    <div class="d-grid gap-3 d-md-flex justify-content-md-end mt-4">
+                        <a href="{{ url_for('create_from_post') }}" class="btn btn-outline-secondary btn-lg me-md-2">
+                            <i class="bi bi-arrow-left me-2"></i>
+                            {% if lang == 'en' %}Go Back & Edit{% else %}返回修改帖子{% endif %}
+                        </a>
+                        <button type="submit" class="btn btn-success btn-lg me-md-2" 
+                                {% if not meeting_info.meeting_id or not registrations %}disabled{% endif %}>
+                            <i class="bi bi-check-circle me-2"></i>
+                            {% if lang == 'en' %}Confirm & Create Meeting{% else %}确认创建会议{% endif %}
+                        </button>
+                    </div>
+                </form>
+
+                {% else %}
+                {# No meeting_id parsed - show error and let user go back #}
+                <div class="alert alert-danger mb-3">
+                    <i class="bi bi-x-circle me-1"></i>
+                    <strong>{% if lang == 'en' %}Failed to parse meeting number!{% else %}未能解析出会议编号！{% endif %}</strong>
+                    {% if lang == 'en' %}Please go back and check the post format.{% else %}请返回检查帖子格式。{% endif %}
+                </div>
+                
+                {% if hints %}
+                <div class="alert alert-info mb-3">
+                    <i class="bi bi-lightbulb me-1"></i>
+                    <strong>{% if lang == 'en' %}Tips:{% else %}格式提示：{% endif %}</strong>
+                    <ul class="mb-0 mt-1">
+                        {% for hint in hints %}
+                        <li>{{ hint }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <form method="GET" action="{{ url_for('create_from_post') }}">
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="submit" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-1"></i>
+                            {% if lang == 'en' %}Go Back & Edit{% else %}返回修改帖子{% endif %}
+                        </button>
+                    </div>
+                </form>
+                {% endif %}
+
+                {% endif %}
+            </div>
+            <div class="card-footer text-muted">
+                <small>
+                    <i class="bi bi-info-circle me-1"></i>
+                    {% if lang == 'en' %}Supported formats: Meeting # (e.g. #982), Date (e.g. 2026年5月7日), Time (e.g. 19:30~21:30), Address (e.g. 地址：xxx), Role registrations (e.g. MM: Name){% else %}支持格式：会议编号（如 #982）、日期（如 2026年5月7日）、时间（如 19:30~21:30）、地址（如 地址：xxx）、角色报名（如 MM: 姓名）{% endif %}
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
