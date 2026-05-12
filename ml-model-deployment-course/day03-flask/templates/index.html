@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>鸢尾花分类器 - Flask API</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: "Microsoft YaHei", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 24px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            border-color: #667eea;
+            outline: none;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: scale(1.02);
+        }
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: none;
+        }
+        .result.show { display: block; }
+        .prediction {
+            font-size: 22px;
+            color: #667eea;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .prob-bar {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .prob-label {
+            width: 120px;
+            font-size: 12px;
+            color: #666;
+        }
+        .prob-fill {
+            height: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 4px;
+            transition: width 0.5s;
+        }
+        .prob-value {
+            margin-left: 8px;
+            font-size: 12px;
+            color: #333;
+            width: 50px;
+        }
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .api-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8eaf6;
+            border-radius: 8px;
+            font-size: 12px;
+            color: #555;
+        }
+        .api-info code {
+            background: #fff;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌸 鸢尾花分类器</h1>
+        <p class="subtitle">输入花的测量数据，AI 帮你识别品种</p>
+        
+        <form action="/predict_form" method="POST">
+            <div class="form-group">
+                <label>🌺 花萼长度 (cm)</label>
+                <input type="number" name="sepal_length" step="0.1" value="5.1" required>
+            </div>
+            <div class="form-group">
+                <label>🌺 花萼宽度 (cm)</label>
+                <input type="number" name="sepal_width" step="0.1" value="3.5" required>
+            </div>
+            <div class="form-group">
+                <label>🌷 花瓣长度 (cm)</label>
+                <input type="number" name="petal_length" step="0.1" value="1.4" required>
+            </div>
+            <div class="form-group">
+                <label>🌷 花瓣宽度 (cm)</label>
+                <input type="number" name="petal_width" step="0.1" value="0.2" required>
+            </div>
+            <button type="submit">🔮 开始预测</button>
+        </form>
+
+        {% if prediction %}
+        <div class="result show">
+            <div class="prediction">🎯 {{ prediction }}</div>
+            {% if probabilities %}
+            <div class="probabilities">
+                {% for i, prob in enumerate(probabilities) %}
+                <div class="prob-bar">
+                    <span class="prob-label">{{ class_names[i] }}</span>
+                    <div class="prob-fill" style="width: {{ (prob * 100)|round }}%"></div>
+                    <span class="prob-value">{{ (prob * 100)|round(1) }}%</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {% if error %}
+        <div class="error">❌ {{ error }}</div>
+        {% endif %}
+
+        <div class="api-info">
+            <strong>📡 API 调用方式：</strong><br>
+            <code>POST /predict</code><br>
+            <code>{"features": [5.1, 3.5, 1.4, 0.2]}</code>
+        </div>
+    </div>
+</body>
+</html>
