@@ -1,0 +1,9 @@
+# 多模态视觉RAG - Python依赖
+
+# 核心依赖 (全部免费)
+Pillow>=9.0.0
+faiss-cpu>=1.7.0
+numpy>=1.21.0
+gradio>=3.30.0
+openai>=1.0.0
+tqdm
