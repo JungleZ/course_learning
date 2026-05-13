@@ -1,10 +1,10 @@
-"""
-Gradio 主应用
-整合 TF-IDF + FAISS 检索与 LLM 生成，提供交互式问答界面
-纯 Python 实现，不依赖 langchain
-"""
 import os
 import sys
+import warnings
+
+# 抑制所有 matplotlib 警告
+warnings.filterwarnings('ignore')
+os.environ['MATPLOTLIB_NONINTERACTIVE'] = '1'
 
 # 确保 src 目录在 Python 路径中
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
