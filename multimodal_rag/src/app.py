@@ -4,6 +4,7 @@
 import sys
 import os
 import warnings
+import traceback
 warnings.filterwarnings('ignore')
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,6 +23,15 @@ from data_processing import process_images, load_index
 BASE_PROJECT_DIR = os.path.dirname(BASE_DIR)
 IMAGE_DIR = os.path.join(BASE_PROJECT_DIR, "images")
 INDEX_DIR = os.path.join(BASE_PROJECT_DIR, "index")
+
+LOG_FILE = os.path.join(BASE_PROJECT_DIR, "app.log")
+
+def log(msg):
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(str(msg) + "\n")
+
+log("=" * 60)
+log("[APP] Starting...")
 
 encoder = None
 retriever = None
@@ -53,51 +63,74 @@ def rebuild_index():
 
 
 def search_by_text(query, top_k=5):
-    if not query.strip() or retriever is None:
-        return [], "请先输入关键词"
+    try:
+        if not query.strip() or retriever is None:
+            return [], "请先输入关键词"
 
-    results = retriever.search_by_text(query.strip(), encoder, k=top_k)
-    if not results:
-        return [], "无匹配图片"
+        log("[SEARCH] query: " + query.strip())
+        results = retriever.search_by_text(query.strip(), encoder, k=top_k)
+        log("[SEARCH] results: %d" % len(results))
 
-    images = []
-    info = "结果:\n"
-    for i, r in enumerate(results):
-        try:
-            images.append(Image.open(r["filepath"]))
-        except:
-            images.append(None)
-        info += "%d. %s (%.4f)\n" % (i + 1, r["filename"], r["score"])
+        if not results:
+            return [], "无匹配图片"
 
-    return images, info
+        images = []
+        info = ""
+        for i, r in enumerate(results):
+            filepath = r["filepath"]
+            log("[SEARCH] file: " + filepath)
+            if os.path.exists(filepath):
+                img = Image.open(filepath)
+                images.append(np.array(img))
+            else:
+                log("[SEARCH] file not found: " + filepath)
+            info += "%d. %s (%.4f)\n" % (i + 1, r["filename"], r["score"])
+
+        return images, info
+    except Exception as e:
+        log("[SEARCH ERROR] " + str(e))
+        log(traceback.format_exc())
+        return [], "搜索出错: %s" % str(e)
 
 
 def search_by_image(uploaded_image, top_k=5):
-    if uploaded_image is None or retriever is None:
-        return [], "请上传图片"
+    try:
+        if uploaded_image is None or retriever is None:
+            return [], "请上传图片"
 
-    if isinstance(uploaded_image, np.ndarray):
-        img = Image.fromarray(uploaded_image)
-    else:
-        img = Image.open(uploaded_image) if isinstance(uploaded_image, str) else uploaded_image
+        log("[IMGSEARCH] input type: %s" % type(uploaded_image).__name__)
 
-    temp_path = os.path.join(INDEX_DIR, "_q.png")
-    img.save(temp_path)
+        if isinstance(uploaded_image, np.ndarray):
+            img = Image.fromarray(uploaded_image)
+        elif isinstance(uploaded_image, str):
+            img = Image.open(uploaded_image)
+        else:
+            img = uploaded_image
 
-    results = retriever.search_by_image(temp_path, encoder, k=top_k)
-    if not results:
-        return [], "无相似图片"
+        temp_path = os.path.join(INDEX_DIR, "_q.png")
+        img.save(temp_path)
+        log("[IMGSEARCH] saved query image: " + temp_path)
 
-    images = []
-    info = "相似图片:\n"
-    for i, r in enumerate(results):
-        try:
-            images.append(Image.open(r["filepath"]))
-        except:
-            pass
-        info += "%d. %s (%.4f)\n" % (i + 1, r["filename"], r["score"])
+        results = retriever.search_by_image(temp_path, encoder, k=top_k)
+        log("[IMGSEARCH] results: %d" % len(results))
 
-    return images, info
+        if not results:
+            return [], "无相似图片"
+
+        images = []
+        info = ""
+        for i, r in enumerate(results):
+            filepath = r["filepath"]
+            if os.path.exists(filepath):
+                img = Image.open(filepath)
+                images.append(np.array(img))
+            info += "%d. %s (%.4f)\n" % (i + 1, r["filename"], r["score"])
+
+        return images, info
+    except Exception as e:
+        log("[IMGSEARCH ERROR] " + str(e))
+        log(traceback.format_exc())
+        return [], "搜索出错: %s" % str(e)
 
 
 def qa_with_images(query, uploaded_image, history, top_k=3):
@@ -109,8 +142,10 @@ def qa_with_images(query, uploaded_image, history, top_k=3):
     if uploaded_image is not None:
         if isinstance(uploaded_image, np.ndarray):
             img = Image.fromarray(uploaded_image)
+        elif isinstance(uploaded_image, str):
+            img = Image.open(uploaded_image)
         else:
-            img = Image.open(uploaded_image) if isinstance(uploaded_image, str) else uploaded_image
+            img = uploaded_image
         temp_path = os.path.join(INDEX_DIR, "_qa.png")
         img.save(temp_path)
         results = retriever.search_by_image(temp_path, encoder, k=top_k)
@@ -190,4 +225,9 @@ if __name__ == "__main__":
     init_system()
     print("\n[WEB] http://127.0.0.1:7861")
     print("=" * 60)
-    demo.launch(server_name="0.0.0.0", server_port=7861)
+    
+    demo.launch(
+        server_name="0.0.0.0", 
+        server_port=7861,
+        share=False
+    )
