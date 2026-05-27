@@ -202,6 +202,7 @@ PHASE_CONFIG = [
     {"key": "break", "name_zh": "中场休息", "name_en": "Break", "color": "bg-break text-dark"},
     {"key": "evaluation", "name_zh": "点评环节", "name_en": "Evaluation", "color": "bg-eval text-dark"},
     {"key": "workshop", "name_zh": "工作坊", "name_en": "Workshop", "color": "bg-workshop text-dark"},
+    {"key": "custom", "name_zh": "自定义活动", "name_en": "Custom", "color": "bg-custom text-dark"},
     {"key": "closing", "name_zh": "闭幕总结", "name_en": "Closing", "color": "bg-closing text-dark"},
 ]
 
@@ -312,6 +313,16 @@ def init_db():
             registration_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (meeting_id) REFERENCES meetings(id),
             UNIQUE(meeting_id, role_name)
+        )""")
+        cursor.execute("""CREATE TABLE IF NOT EXISTS custom_activities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            meeting_id INTEGER NOT NULL,
+            activity_zh TEXT NOT NULL,
+            activity_en TEXT,
+            duration INTEGER DEFAULT 5,
+            role TEXT DEFAULT '',
+            sort_order INTEGER DEFAULT 0,
+            FOREIGN KEY (meeting_id) REFERENCES meetings(id)
         )""")
         for role in DEFAULT_ROLES:
             try:
@@ -1150,6 +1161,22 @@ def generate_agenda_poster(meeting_db_id):
                 current_min += workshop_duration
             continue
         
+        if phase_key == 'custom':
+            custom_acts = conn.execute('SELECT * FROM custom_activities WHERE meeting_id = ? ORDER BY sort_order', (meeting_db_id,)).fetchall()
+            for ca in custom_acts:
+                act_name = ca['activity_en'] if (lang == 'en' and ca['activity_en']) else (ca['activity_en'] + ' ' + ca['activity_zh'] if lang == 'both' and ca['activity_en'] else ca['activity_zh'])
+                role_val = ca['role'] if ca['role'] else '-'
+                agenda.append({
+                    "time": f"{current_min//60:02d}:{current_min%60:02d}",
+                    "end_time": f"{(current_min + ca['duration'])//60:02d}:{(current_min + ca['duration'])%60:02d}",
+                    "phase": "custom",
+                    "activity": act_name,
+                    "duration": ca['duration'],
+                    "role": role_val
+                })
+                current_min += ca['duration']
+            continue
+        
         for tpl in templates:
             template_role = tpl['role']
             if '(' in template_role and ')' in template_role:
@@ -1339,6 +1366,28 @@ def generate_agenda(meeting_db_id):
                     })
                     current_min += duration
         
+        if phase_key == 'custom':
+            custom_acts = conn.execute('SELECT * FROM custom_activities WHERE meeting_id = ? ORDER BY sort_order', (meeting_db_id,)).fetchall()
+            for ca in custom_acts:
+                if lang == 'en':
+                    act_name = ca['activity_en'] if ca['activity_en'] else ca['activity_zh']
+                elif lang == 'zh':
+                    act_name = ca['activity_zh']
+                else:
+                    act_name = f"{ca['activity_en'] + ' ' if ca['activity_en'] else ''}{ca['activity_zh']}"
+                role_val = ca['role'] if ca['role'] else '-'
+                if role_val != '-':
+                    act_name += f" ({role_val})"
+                agenda.append({
+                    "time": f"{current_min//60:02d}:{current_min%60:02d}",
+                    "phase": "custom",
+                    "activity": act_name,
+                    "duration": ca['duration'],
+                    "role": role_val
+                })
+                current_min += ca['duration']
+            continue
+        
         # Evaluation: dynamic IE entries
         if phase_key == 'evaluation':
             for i in range(1, 5):
@@ -1376,6 +1425,62 @@ def generate_agenda(meeting_db_id):
     
     conn.close()
     return render_template('agenda.html', meeting=meeting, agenda=agenda, PHASE_CONFIG=PHASE_CONFIG, lang=lang)
+
+@app.route('/api/meeting/<int:meeting_db_id>/custom_activities', methods=['GET'])
+def get_custom_activities(meeting_db_id):
+    conn = get_db_connection()
+    activities = conn.execute(
+        'SELECT id, activity_zh, activity_en, duration, role, sort_order FROM custom_activities WHERE meeting_id = ? ORDER BY sort_order',
+        (meeting_db_id,)
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(a) for a in activities])
+
+@app.route('/api/meeting/<int:meeting_db_id>/custom_activities', methods=['POST'])
+def add_custom_activity(meeting_db_id):
+    data = request.get_json()
+    conn = get_db_connection()
+    max_order = conn.execute('SELECT COALESCE(MAX(sort_order), -1) + 1 as next FROM custom_activities WHERE meeting_id = ?',
+                            (meeting_db_id,)).fetchone()['next']
+    conn.execute(
+        'INSERT INTO custom_activities (meeting_id, activity_zh, activity_en, duration, role, sort_order) VALUES (?, ?, ?, ?, ?, ?)',
+        (meeting_db_id, data['activity_zh'], data.get('activity_en', ''), int(data.get('duration', 5)), data.get('role', ''), max_order)
+    )
+    conn.commit()
+    new_id = conn.execute('SELECT last_insert_rowid() as id').fetchone()['id']
+    conn.close()
+    return jsonify({'id': new_id}), 201
+
+@app.route('/api/meeting/<int:meeting_db_id>/custom_activities/<int:activity_id>', methods=['PUT'])
+def update_custom_activity(meeting_db_id, activity_id):
+    data = request.get_json()
+    conn = get_db_connection()
+    conn.execute(
+        'UPDATE custom_activities SET activity_zh=?, activity_en=?, duration=?, role=? WHERE id=? AND meeting_id=?',
+        (data['activity_zh'], data.get('activity_en', ''), int(data.get('duration', 5)), data.get('role', ''), activity_id, meeting_db_id)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/meeting/<int:meeting_db_id>/custom_activities/<int:activity_id>', methods=['DELETE'])
+def delete_custom_activity(meeting_db_id, activity_id):
+    conn = get_db_connection()
+    conn.execute('DELETE FROM custom_activities WHERE id=? AND meeting_id=?', (activity_id, meeting_db_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
+
+@app.route('/api/meeting/<int:meeting_db_id>/custom_activities/reorder', methods=['PUT'])
+def reorder_custom_activities(meeting_db_id):
+    data = request.get_json()
+    conn = get_db_connection()
+    for item in data['order']:
+        conn.execute('UPDATE custom_activities SET sort_order=? WHERE id=? AND meeting_id=?',
+                    (item['sort_order'], item['id'], meeting_db_id))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
 
 @app.route('/register', methods=['POST'])
 def register():

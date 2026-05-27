@@ -190,9 +190,44 @@
         </div>
     </div>
 </div>
+
+<!-- 自定义活动 -->
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-pencil-square me-2"></i>{% if lang == 'en' %}Custom Activities{% else %}自定义活动{% endif %}</h5>
+        <button id="saveOrderBtn" class="btn btn-sm btn-light" style="display:none">
+            <i class="bi bi-save me-1"></i>{% if lang == 'en' %}Save Order{% else %}保存排序{% endif %}
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="row g-2 mb-3">
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" id="activityZh" placeholder="{% if lang == 'en' %}Activity (Chinese){% else %}活动名称（中文）{% endif %}">
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control form-control-sm" id="activityEn" placeholder="{% if lang == 'en' %}Activity (English){% else %}活动名称（英文）{% endif %}">
+            </div>
+            <div class="col-md-2">
+                <input type="number" class="form-control form-control-sm" id="activityDuration" placeholder="{% if lang == 'en' %}Min{% else %}时长(分){% endif %}" value="5">
+            </div>
+            <div class="col-md-2">
+                <input type="text" class="form-control form-control-sm" id="activityRole" placeholder="{% if lang == 'en' %}Role{% else %}角色{% endif %}">
+            </div>
+            <div class="col-md-1">
+                <button id="addActivityBtn" class="btn btn-sm btn-success w-100">
+                    <i class="bi bi-plus-lg"></i>
+                </button>
+            </div>
+        </div>
+        <div id="customActivitiesList" class="list-group" data-meeting-id="{{ meeting.id }}">
+            <div class="text-center text-muted py-3">{% if lang == 'en' %}No custom activities yet{% else %}暂无自定义活动{% endif %}</div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var alerts = document.querySelectorAll('.alert');
@@ -202,6 +237,86 @@ document.addEventListener('DOMContentLoaded', function() {
             bsAlert.close();
         }, 3000);
     });
+
+    var activitiesList = document.getElementById('customActivitiesList');
+    if (!activitiesList) return;
+
+    var addBtn = document.getElementById('addActivityBtn');
+    var saveOrderBtn = document.getElementById('saveOrderBtn');
+    var meetingId = activitiesList.dataset.meetingId;
+
+    function loadActivities() {
+        fetch('/api/meeting/' + meetingId + '/custom_activities')
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                activitiesList.innerHTML = '';
+                data.forEach(function(a, i) {
+                    var item = document.createElement('div');
+                    item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                    item.dataset.id = a.id;
+                    item.innerHTML = '<span class="drag-handle me-2" style="cursor:grab">☰</span>' +
+                        '<div class="flex-grow-1"><strong>' + a.activity_zh + '</strong>' +
+                        (a.duration ? ' <small class="text-muted">(' + a.duration + 'min)</small>' : '') +
+                        (a.role ? ' <small class="text-muted">— ' + a.role + '</small>' : '') +
+                        '</div>' +
+                        '<div>' +
+                        '<button class="btn btn-sm btn-outline-danger" onclick="deleteActivity(' + a.id + ')"><i class="bi bi-trash"></i></button>' +
+                        '</div>';
+                    activitiesList.appendChild(item);
+                });
+            });
+    }
+
+    window.deleteActivity = function(id) {
+        if (!confirm('确定删除此活动？')) return;
+        fetch('/api/meeting/' + meetingId + '/custom_activities/' + id, {method: 'DELETE'})
+            .then(function(r) { return r.json(); })
+            .then(function() { loadActivities(); });
+    };
+
+    addBtn.addEventListener('click', function() {
+        var zh = document.getElementById('activityZh').value.trim();
+        var en = document.getElementById('activityEn').value.trim();
+        var dur = document.getElementById('activityDuration').value || 5;
+        var role = document.getElementById('activityRole').value.trim();
+        if (!zh) { alert('请输入活动名称'); return; }
+        fetch('/api/meeting/' + meetingId + '/custom_activities', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({activity_zh: zh, activity_en: en, duration: parseInt(dur), role: role})
+        }).then(function(r) { return r.json(); }).then(function() {
+            document.getElementById('activityZh').value = '';
+            document.getElementById('activityEn').value = '';
+            document.getElementById('activityDuration').value = '5';
+            document.getElementById('activityRole').value = '';
+            loadActivities();
+        });
+    });
+
+    var sortable = new Sortable(activitiesList, {
+        handle: '.drag-handle',
+        animation: 150,
+        onEnd: function() {
+            saveOrderBtn.style.display = 'inline-block';
+        }
+    });
+
+    saveOrderBtn.addEventListener('click', function() {
+        var items = activitiesList.querySelectorAll('.list-group-item');
+        var order = [];
+        items.forEach(function(item, i) {
+            order.push({id: parseInt(item.dataset.id), sort_order: i});
+        });
+        fetch('/api/meeting/' + meetingId + '/custom_activities/reorder', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({order: order})
+        }).then(function(r) { return r.json(); }).then(function() {
+            saveOrderBtn.style.display = 'none';
+        });
+    });
+
+    loadActivities();
 });
 </script>
 {% endblock %}
