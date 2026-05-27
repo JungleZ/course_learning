@@ -1,0 +1,546 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-2 tm-poster" style="width:210mm; max-width:210mm;">
+
+    {# ===== Print Button ===== #}
+    <div class="no-print text-center mb-2">
+        <button onclick="window.print()" class="btn btn-sm btn-primary">
+            🖨️ {% if lang == 'en' %}Print / Save PDF{% else %}打印 / 另存为 PDF{% endif %}
+        </button>
+    </div>
+
+    {# ===== BrandBanner: image only ===== #}
+    <div class="brand-banner">
+        <img src="{{ url_for('static', filename='head.png') }}" class="brand-logo-img" alt="Logo" style="width:100%;">
+    </div>
+
+    {# ===== DecorativeStrip ===== #}
+    <div class="decorative-strip"></div>
+
+    {# ===== ThemeBanner: single bar, left=Meeting, right=Theme ===== #}
+    <div class="theme-banner">
+        <div class="theme-left">
+            <span class="theme-label">{% if lang == 'en' %}Meeting{% else %}会议{% endif %}</span>
+            <span class="theme-num">{{ meeting.meeting_id }}</span>
+        </div>
+        <div class="theme-divider"></div>
+        <div class="theme-right">
+            <span class="theme-label">{% if lang == 'en' %}Theme{% else %}主题{% endif %}</span>
+            <span class="theme-text">{{ meeting.theme or meeting.english_theme or 'TBD' }}</span>
+        </div>
+    </div>
+
+    {# ===== MetaRow: Meeting Manager | Date+Time ===== #}
+    <div class="meta-row">
+        <div class="meta-item">
+            <span class="meta-label">{% if lang == 'en' %}Meeting Manager{% else %}会议经理{% endif %}</span>
+            <span class="meta-val">{{ meeting_manager_name or 'TBD' }}</span>
+        </div>
+        <div class="meta-sep"></div>
+        <div class="meta-item">
+            <span class="meta-label">{% if lang == 'en' %}Date / Time{% else %}日期 / 时间{% endif %}</span>
+            <span class="meta-val">{% if lang == 'en' and meeting.time_en %}{{ meeting.time_en }}{% else %}{{ meeting.time }}{% endif %}</span>
+        </div>
+    </div>
+
+    {# ===== MainGrid: 35% sidebar | 65% agenda table ===== #}
+    <div class="main-grid">
+
+        {# ===== SidebarStack (Independent Left Zone) ===== #}
+        <div class="sidebar">
+
+            {# About Us Card - rich text #}
+            <div class="info-card">
+                <div class="info-card-header">
+                    {% if lang == 'en' %}About Foshan English Talks TMC{% else %}关于我们{% endif %}
+                </div>
+                <div class="info-card-body about-body">
+                    {% if lang == 'en' %}
+                    <div class="about-slogan">"Bring the world into the speech!"</div>
+                    <p>Foshan English Talks Toastmasters provides every member with a social platform to communicate and learn from one another.</p>
+                    <p>It is a public club opened for all those who want to improve their public speaking and leadership skills.</p>
+                    <p>If you are passionate and willing to share, you are warmly welcomed to join us!</p>
+                    {% else %}
+                    <div class="about-slogan">"Bring the world into the speech!"</div>
+                    <p><strong>佛山英文说 Toastmasters 国际演讲会</strong></p>
+                    <p>我们是一个公开的俱乐部，向所有希望提升公众演讲和领导力技能的朋友敞开大门。</p>
+                    <div class="about-meta">
+                        <div class="about-meta-row"><span class="about-icon">🕒</span><span>15:00-17:00, 周日</span></div>
+                        <div class="about-meta-row"><span class="about-icon">💰</span><span>会员免费 | 嘉宾 ¥30/人</span></div>
+                        <div class="about-meta-row"><span class="about-icon">📍</span><span>南海青年之家</span></div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# Four Abilities Card - tag list #}
+            <div class="info-card">
+                <div class="info-card-header gold">
+                    {% if lang == 'en' %}Four Abilities{% else %}四项能力{% endif %}
+                </div>
+                <div class="info-card-body">
+                    <div class="tag-list">
+                        <span class="tag-item">🗣️ {% if lang == 'en' %}Public Speaking{% else %}公众演讲{% endif %}</span>
+                        <span class="tag-item">🤝 {% if lang == 'en' %}Interpersonal Skills{% else %}人际沟通{% endif %}</span>
+                        <span class="tag-item">🎯 {% if lang == 'en' %}Strategic Leadership{% else %}战略领导力{% endif %}</span>
+                        <span class="tag-item">💪 {% if lang == 'en' %}Self-confidence{% else %}自信成长{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+
+            {# Timer Rules Card - mini table #}
+            <div class="info-card">
+                <div class="info-card-header green">
+                    {% if lang == 'en' %}Timing Rules{% else %}时间规则{% endif %}
+                </div>
+                <div class="info-card-body timer-body">
+                    <table class="timer-table">
+                        <thead>
+                            <tr>
+                                <th>{% if lang == 'en' %}Signal{% else %}信号{% endif %}</th>
+                                <th>{% if lang == 'en' %}{'<3min'{% else %}<3分{% endif %}</th>
+                                <th>{% if lang == 'en' %}'3-10min'{% else %}3-10分{% endif %}</th>
+                                <th>{% if lang == 'en' %}{'>10min'{% else %}>10分{% endif %}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td class="signal-cell"><span class="signal-dot green"></span>{% if lang == 'en' %}Green{% else %}绿牌{% endif %}</td><td>{% if lang == 'en' %}1min left{% else %}剩1分钟{% endif %}</td><td>{% if lang == 'en' %}2min left{% else %}剩2分钟{% endif %}</td><td>{% if lang == 'en' %}5min left{% else %}剩5分钟{% endif %}</td></tr>
+                            <tr><td class="signal-cell"><span class="signal-dot yellow"></span>{% if lang == 'en' %}Yellow{% else %}黄牌{% endif %}</td><td>{% if lang == 'en' %}30s left{% else %}剩30秒{% endif %}</td><td>{% if lang == 'en' %}1min left{% else %}剩1分钟{% endif %}</td><td>{% if lang == 'en' %}2min left{% else %}剩2分钟{% endif %}</td></tr>
+                            <tr><td class="signal-cell"><span class="signal-dot red"></span>{% if lang == 'en' %}Red{% else %}红牌{% endif %}</td><td>{% if lang == 'en' %}Time's up{% else %}时间到{% endif %}</td><td>{% if lang == 'en' %}Time's up{% else %}时间到{% endif %}</td><td>{% if lang == 'en' %}Time's up{% else %}时间到{% endif %}</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {# Six Pathways Card - two column list #}
+            <div class="info-card">
+                <div class="info-card-header blue">
+                    {% if lang == 'en' %}Six Pathways{% else %}六条路径{% endif %}
+                </div>
+                <div class="info-card-body">
+                    <div class="two-col-list">
+                        <div><strong>DL</strong> - {% if lang == 'en' %}Dynamic Leadership{% else %}动态领导{% endif %}</div>
+                        <div><strong>EH</strong> - {% if lang == 'en' %}Engaging Humor{% else %}运用幽默{% endif %}</div>
+                        <div><strong>MS</strong> - {% if lang == 'en' %}Motivational Strategies{% else %}激励策略{% endif %}</div>
+                        <div><strong>VC</strong> - {% if lang == 'en' %}Visionary Communication{% else %}愿景沟通{% endif %}</div>
+                        <div><strong>PM</strong> - {% if lang == 'en' %}Presentation Mastery{% else %}精通演讲{% endif %}</div>
+                        <div><strong>PI</strong> - {% if lang == 'en' %}Persuasive Influence{% else %}有说服力的影响{% endif %}</div>
+                    </div>
+                </div>
+            </div>
+
+            {# Meeting Rules Card - ordered list #}
+            <div class="info-card">
+                <div class="info-card-header">
+                    {% if lang == 'en' %}Meeting Rules{% else %}会议礼仪{% endif %}
+                </div>
+                <div class="info-card-body">
+                    <div class="ordered-list">
+                        <div class="rule-item">🔇 {% if lang == 'en' %}Keep quiet during meeting{% else %}会议期间保持安静{% endif %}</div>
+                        <div class="rule-item">📱 {% if lang == 'en' %}Mobile on silent mode{% else %}手机静音{% endif %}</div>
+                        <div class="rule-item">🤝 {% if lang == 'en' %}Shake hands after speech{% else %}演讲后握手{% endif %}</div>
+                        <div class="rule-item">🚫 {% if lang == 'en' %}No politics/religion/ads/sex{% else %}避免敏感话题{% endif %}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ===== AgendaTable (Independent Right Zone - Schedule Only) ===== #}
+        <div class="agenda-zone">
+            <table class="agenda-table" style="table-layout:fixed;">
+                <colgroup>
+                    <col style="width:14%">
+                    <col style="width:12%">
+                    <col style="width:42%">
+                    <col style="width:10%">
+                    <col style="width:22%">
+                </colgroup>
+                <thead>
+                    <tr class="agenda-header-row">
+                        <th>{% if lang == 'en' %}Start{% else %}开始{% endif %}</th>
+                        <th>{% if lang == 'en' %}End{% else %}结束{% endif %}</th>
+                        <th>{% if lang == 'en' %}Schedule{% else %}议程{% endif %}</th>
+                        <th>{% if lang == 'en' %}Min{% else %}分{% endif %}</th>
+                        <th>{% if lang == 'en' %}Speaker{% else %}演讲者{% endif %}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for phase in PHASE_CONFIG %}
+                        {% set phase_items = [] %}
+                        {% for item in agenda %}
+                            {% if item.phase == phase.key %}
+                                {% set _ = phase_items.append(item) %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if phase_items %}
+                        <tr class="agenda-divider-row">
+                            <td colspan="5" class="agenda-divider-cell {{ phase.color }}">
+                                {% if lang == 'zh' %}{{ phase.name_zh }}
+                                {% elif lang == 'en' %}{{ phase.name_en }}
+                                {% else %}{{ phase.name_en }} / {{ phase.name_zh }}{% endif %}
+                            </td>
+                        </tr>
+                        {% for item in phase_items %}
+                        <tr class="agenda-row">
+                            <td class="td-time">{{ item.time }}</td>
+                            <td class="td-time">{{ item.end_time or '' }}</td>
+                            <td class="td-schedule">{{ item.activity }}</td>
+                            <td class="td-min">{% if item.duration > 0 %}{{ item.duration }}{% endif %}</td>
+                            <td class="td-speaker">
+                                {% if item.role == 'TBD' %}<span class="tbd-text">TBD</span>
+                                {% elif item.role == '' or item.role == '-' %}-{% else %}{{ item.role }}{% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% endif %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    {# ===== FooterGrid: 42% Officer | 36% Join Us | 22% QR ===== #}
+    <div class="footer-grid">
+
+        {# Officer Team Table Card #}
+        <div class="footer-card footer-officer">
+            <div class="footer-card-header">{% if lang == 'en' %}Officer Team{% else %}官员团队{% endif %}</div>
+            <table class="officer-table">
+                <tbody>
+                    <tr><td class="officer-role">President</td><td class="officer-name">Bass</td></tr>
+                    <tr><td class="officer-role">VPE</td><td class="officer-name">Luke</td></tr>
+                    <tr><td class="officer-role">VPM</td><td class="officer-name">Jager</td></tr>
+                    <tr><td class="officer-role">VPPR</td><td class="officer-name">Rosen</td></tr>
+                    <tr><td class="officer-role">Secretary</td><td class="officer-name">Amy</td></tr>
+                    <tr><td class="officer-role">Treasurer</td><td class="officer-name">Chloe</td></tr>
+                    <tr><td class="officer-role">SAA</td><td class="officer-name">Lion</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        {# Join Us + Reflection Split Card #}
+        <div class="footer-card footer-join">
+            <div class="footer-card-header">{% if lang == 'en' %}How to Join Us?{% else %}如何加入我们？{% endif %}</div>
+            <div class="join-steps">
+                <span class="step-n">1</span><span class="step-d">{% if lang == 'en' %}Attend meeting ≥3 times, take role ≥2 times{% else %}参加例会≥3次，尝试角色≥2次{% endif %}</span>
+                <span class="step-n">2</span><span class="step-d">{% if lang == 'en' %}Fill application & pass interview{% else %}填写申请表，通过面试{% endif %}</span>
+                <span class="step-n">3</span><span class="step-d">{% if lang == 'en' %}Pay annual fee{% else %}缴纳年费{% endif %}</span>
+            </div>
+            <div class="footer-divider-line"></div>
+            <div class="reflection-title">{% if lang == 'en' %}What did you learn today?{% else %}今天你学到了什么？{% endif %}</div>
+            <div class="reflection-box"></div>
+        </div>
+
+        {# QR Interactive Zone Card #}
+        <div class="footer-card footer-qr">
+            <div class="footer-card-header">{% if lang == 'en' %}Interactive Zone{% else %}互动区{% endif %}</div>
+            <div class="qr-area">
+                <div class="qr-item">
+                    <div class="qr-label">官方公众号</div>
+                    <img src="{{ url_for('static', filename='officials.jpg') }}" alt="Officials" class="qr-img" loading="eager" decoding="async">
+                </div>
+                <div class="qr-item">
+                    <div class="qr-label">VPM</div>
+                    <img src="{{ url_for('static', filename='qrcode_wechat.png') }}" alt="QR Code" class="qr-img" loading="eager" decoding="async">
+                </div>
+                <div class="qr-item">
+                    <div class="qr-label">财务收款</div>
+                    <img src="{{ url_for('static', filename='hebao.jpg') }}" alt="Finance" class="qr-img" loading="eager" decoding="async">
+                </div>
+            </div>
+            <div class="footer-slogan">{% if lang == 'en' %}Where Leaders Are Made{% else %}领袖由此诞生{% endif %}</div>
+            <div class="footer-tm">Toastmasters International</div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+:root {
+    --tm-burgundy: #7B2635;
+    --tm-burgundy-dark: #5a1a27;
+    --tm-gold: #E3C35A;
+    --tm-gold-light: #F3DF87;
+    --tm-peach: #F4DDD0;
+    --tm-green: #11A24A;
+    --tm-yellow: #F0DF00;
+    --tm-red: #D72828;
+    --tm-blue: #1a4f8a;
+    --tm-border: #2D2D2D;
+}
+
+/* ===== BrandBanner ===== */
+.brand-banner {
+    border: 2px solid var(--tm-gold);
+    border-bottom: none;
+    background: #fff;
+}
+
+/* ===== DecorativeStrip ===== */
+.decorative-strip {
+    height: 5px;
+    background: var(--tm-gold-light);
+    border-left: 2px solid var(--tm-gold);
+    border-right: 2px solid var(--tm-gold);
+}
+
+/* ===== ThemeBanner ===== */
+.theme-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--tm-burgundy);
+    border: 2px solid var(--tm-gold);
+    border-bottom: none;
+    padding: 4px 12px;
+    gap: 12px;
+    min-height: 28px;
+}
+.theme-left, .theme-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+.theme-label {
+    font-size: 7px;
+    color: var(--tm-gold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+.theme-num {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--tm-gold-light);
+    white-space: nowrap;
+}
+.theme-text {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--tm-gold-light);
+    line-height: 1.2;
+}
+.theme-divider {
+    width: 1px;
+    height: 16px;
+    background: var(--tm-gold);
+    flex-shrink: 0;
+}
+
+/* ===== MetaRow ===== */
+.meta-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 12px;
+    background: #fff;
+    border: 2px solid var(--tm-burgundy);
+    border-bottom: none;
+    min-height: 24px;
+}
+.meta-item { display: flex; gap: 5px; align-items: center; text-align: center; }
+.meta-label { font-size: 8px; color: #888; white-space: nowrap; }
+.meta-val { font-size: 9px; font-weight: 700; color: var(--tm-burgundy); }
+.meta-sep { width: 1px; height: 12px; background: #ccc; }
+
+/* ===== MainGrid: 35% | 65% ===== */
+.main-grid {
+    display: flex;
+    border: 2px solid var(--tm-burgundy);
+    border-bottom: none;
+}
+
+/* ===== Sidebar (Independent Left Zone) ===== */
+.sidebar {
+    width: 35%;
+    min-width: 35%;
+    flex-shrink: 0;
+    border-right: 2px solid var(--tm-burgundy);
+    padding: 7px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    background: #fff;
+}
+.info-card {
+    border: 1px solid #ddd;
+}
+.info-card-header {
+    background: var(--tm-burgundy);
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 3px 7px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.info-card-header.gold { background: var(--tm-gold); color: var(--tm-burgundy-dark); }
+.info-card-header.green { background: var(--tm-green); }
+.info-card-header.blue { background: var(--tm-blue); }
+.info-card-body { padding: 5px 7px; }
+.info-card-body p { font-size: 8px; color: #555; line-height: 1.35; margin: 0 0 2px; }
+.about-body { display: flex; flex-direction: column; gap: 2px; }
+.about-slogan { font-size: 7.5px; font-style: italic; color: var(--tm-burgundy); font-weight: 700; margin-bottom: 1px; }
+.about-meta { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; }
+.about-meta-row { display: flex; align-items: center; gap: 3px; font-size: 7.5px; color: #555; }
+.about-icon { font-size: 7.5px; }
+
+.tag-list { display: flex; flex-direction: column; gap: 1px; }
+.tag-item { font-size: 8px; color: #444; padding: 1px 0; }
+
+.timer-table { width: 100%; border-collapse: collapse; font-size: 7px; }
+.timer-table th, .timer-table td { border: 1px solid #ddd; padding: 1px 2px; text-align: center; }
+.timer-table th { background: #f5f5f5; font-weight: 600; color: #666; }
+.signal-cell { text-align: left; }
+.signal-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+.signal-dot.green { background: var(--tm-green); }
+.signal-dot.yellow { background: var(--tm-yellow); }
+.signal-dot.red { background: var(--tm-red); }
+
+.two-col-list { display: flex; flex-direction: column; gap: 1px; }
+.two-col-list div { font-size: 8px; color: #444; }
+
+.ordered-list { display: flex; flex-direction: column; gap: 1px; }
+.rule-item { font-size: 8px; color: #555; }
+
+/* ===== AgendaTable (Independent Right Zone) ===== */
+.agenda-zone {
+    flex: 1;
+    padding: 7px;
+    min-width: 0;
+}
+.agenda-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9px;
+    border: 2px solid var(--tm-burgundy);
+}
+
+.agenda-header-row { background: var(--tm-burgundy); }
+.agenda-header-row th {
+    color: #fff;
+    font-size: 8px;
+    font-weight: 600;
+    padding: 3px 3px;
+    text-align: center;
+    border: 1px solid #4a0a0a;
+    text-transform: uppercase;
+}
+
+.agenda-divider-row td { border: none; }
+.agenda-divider-cell {
+    padding: 2px 6px;
+    font-size: 9px;
+    font-weight: 700;
+    text-align: center;
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+.agenda-divider-cell.bg-init,
+.agenda-divider-cell.bg-topics,
+.agenda-divider-cell.bg-speech,
+.agenda-divider-cell.bg-break,
+.agenda-divider-cell.bg-eval,
+.agenda-divider-cell.bg-workshop,
+.agenda-divider-cell.bg-closing { background: #F4DDD0; color: #000; }
+
+.agenda-row td {
+    border: 1px solid #ccc;
+    padding: 2px 3px;
+    background: #fff;
+    vertical-align: middle;
+}
+.agenda-row:nth-child(4n) td { background: var(--tm-peach); }
+
+.td-time { text-align: center; font-family: 'Courier New', monospace; font-weight: 600; font-size: 9px; color: #333; }
+.td-schedule { font-size: 9px; color: #333; line-height: 1.2; }
+.td-min { text-align: center; font-size: 9px; color: #666; }
+.td-speaker { text-align: center; font-weight: 600; color: var(--tm-burgundy); font-size: 9px; }
+.tbd-text { color: var(--tm-red); font-size: 9px; font-weight: 600; }
+
+/* ===== Agenda Table Borders ===== */
+.agenda-header-row th:first-child { border-left: none; }
+.agenda-header-row th:last-child { border-right: none; }
+.td-time:first-child { border-left: none; }
+.td-time:last-child { border-right: none; }
+.td-schedule { border-left: none; border-right: none; }
+.td-min { border-left: none; border-right: none; }
+
+/* ===== FooterGrid: 42% | 36% | 22% ===== */
+.footer-grid {
+    display: flex;
+    border: 2px solid var(--tm-burgundy);
+}
+.footer-card {
+    padding: 8px 10px;
+    background: var(--tm-burgundy);
+    color: #fff;
+}
+.footer-officer { width: 30%; border-right: 1px solid rgba(255,255,255,0.15); }
+.footer-join { width: 30%; border-right: 1px solid rgba(255,255,255,0.15); }
+.footer-qr { width: 40%; }
+
+.footer-card-header {
+    font-size: 8px;
+    font-weight: 700;
+    color: var(--tm-gold-light);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    margin-bottom: 5px;
+}
+
+.officer-table { width: 100%; border-collapse: collapse; }
+.officer-table td { font-size: 8px; padding: 1px 0; }
+.officer-role { color: #aaa; }
+.officer-name { color: #fff; font-weight: 600; }
+
+.join-steps { display: flex; flex-direction: column; gap: 3px; margin-bottom: 5px; }
+.step-n { background: var(--tm-gold); color: var(--tm-burgundy-dark); width: 12px; height: 12px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 7px; font-weight: 700; margin-right: 3px; }
+.step-d { font-size: 7.5px; color: #ddd; }
+.footer-divider-line { border-bottom: 1px solid rgba(255,255,255,0.2); margin: 5px 0; }
+.reflection-title { font-size: 7px; color: #aaa; font-style: italic; margin-bottom: 3px; }
+.reflection-box { border: 1px solid rgba(255,255,255,0.2); height: 20px; }
+
+.qr-area { margin-bottom: 4px; text-align: center; white-space: nowrap; }
+.qr-item { display: inline-block; width: 32%; text-align: center; background: #fff; border-radius: 3px; padding: 3px; vertical-align: top; }
+.qr-label { font-size: 6px; color: #000; text-align: center; margin-bottom: 2px; white-space: nowrap; }
+.qr-img { width: 100%; height: auto; }
+.footer-slogan { font-size: 7px; color: #aaa; font-style: italic; text-align: center; margin-bottom: 1px; }
+.footer-tm { font-size: 6px; color: var(--tm-gold-light); text-align: center; }
+
+/* ===== Print ===== */
+@media print {
+    @page { size: 210mm 297mm; margin: 5mm; }
+    body { background: #fff !important; }
+    .container { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+    .brand-banner, .theme-banner, .meta-row, .main-grid, .footer-grid { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .agenda-header-row, .agenda-divider-cell { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .agenda-table { font-size: 8px; }
+    .td-time, .td-schedule, .td-min, .td-speaker { font-size: 8px !important; padding: 1px 2px !important; }
+    .qr-img { width: 100% !important; height: auto !important; }
+    .qr-item { background: #fff !important; }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelector('button[onclick*="print"]')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    var imgs = document.querySelectorAll('.qr-img'), loaded = 0, total = imgs.length;
+    if (!total) { window.print(); return; }
+    imgs.forEach(function(img) {
+        (img.complete ? loaded++ : (img.onload = img.onerror = function() { loaded++; if (loaded === total) window.print(); }));
+        if (loaded === total) window.print();
+    });
+});
+</script>
+{% endblock %}

@@ -196,13 +196,13 @@ def is_member_only_role(role_name):
     return False
 
 PHASE_CONFIG = [
-    {"key": "init", "name_zh": "签到与开场", "name_en": "Init", "color": "bg-info text-white"},
-    {"key": "table_topics", "name_zh": "即兴演讲", "name_en": "Table Topics", "color": "bg-warning"},
-    {"key": "speech", "name_zh": "备稿演讲", "name_en": "Prepared Speech", "color": "bg-success text-white"},
-    {"key": "break", "name_zh": "中场休息", "name_en": "Break", "color": "bg-secondary text-white"},
-    {"key": "evaluation", "name_zh": "点评环节", "name_en": "Evaluation", "color": "bg-primary text-white"},
-    {"key": "workshop", "name_zh": "工作坊", "name_en": "Workshop", "color": "bg-success text-white"},
-    {"key": "closing", "name_zh": "闭幕总结", "name_en": "Closing", "color": "bg-dark text-white"},
+    {"key": "init", "name_zh": "签到与开场", "name_en": "Init", "color": "bg-init text-dark"},
+    {"key": "table_topics", "name_zh": "即兴演讲", "name_en": "Table Topics", "color": "bg-topics text-dark"},
+    {"key": "speech", "name_zh": "备稿演讲", "name_en": "Prepared Speech", "color": "bg-speech text-dark"},
+    {"key": "break", "name_zh": "中场休息", "name_en": "Break", "color": "bg-break text-dark"},
+    {"key": "evaluation", "name_zh": "点评环节", "name_en": "Evaluation", "color": "bg-eval text-dark"},
+    {"key": "workshop", "name_zh": "工作坊", "name_en": "Workshop", "color": "bg-workshop text-dark"},
+    {"key": "closing", "name_zh": "闭幕总结", "name_en": "Closing", "color": "bg-closing text-dark"},
 ]
 
 PHASE_TEMPLATES = {
@@ -1093,6 +1093,91 @@ def update_club_name(meeting_db_id):
     conn.commit()
     conn.close()
     return jsonify({'success': True, 'club_name': club_name})
+
+@app.route('/meeting/<int:meeting_db_id>/poster')
+def generate_agenda_poster(meeting_db_id):
+    lang = request.args.get('lang', session.get('lang', 'zh'))
+    conn = get_db_connection()
+    meeting = conn.execute('SELECT * FROM meetings WHERE id = ?', (meeting_db_id,)).fetchone()
+    if not meeting:
+        conn.close()
+        flash('会议不存在！', 'danger')
+        return redirect(url_for('index'))
+    
+    regs = conn.execute('SELECT role_name, member_name FROM registrations WHERE meeting_id = ?', (meeting_db_id,)).fetchall()
+    reg_dict = {r['role_name']: r['member_name'] for r in regs}
+    
+    if lang == 'en' and meeting['time_en']:
+        current_min = parse_meeting_start_time(meeting['time_en'])
+    else:
+        current_min = parse_meeting_start_time(meeting['time'])
+    
+    workshop_speaker = meeting['workshop_speaker'] if meeting['workshop_speaker'] else None
+    workshop_zh = meeting['workshop_zh'] if meeting['workshop_zh'] else None
+    workshop_en = meeting['workshop_en'] if meeting['workshop_en'] else None
+    workshop_duration = int(meeting['workshop_duration']) if meeting['workshop_duration'] else 30
+    
+    agenda = []
+    
+    for phase in PHASE_CONFIG:
+        phase_key = phase['key']
+        templates = PHASE_TEMPLATES.get(phase_key, [])
+        
+        if phase_key == 'workshop':
+            if workshop_speaker:
+                if lang == 'en' and workshop_en:
+                    workshop_activity = workshop_en
+                elif lang == 'zh':
+                    workshop_activity = workshop_zh if workshop_zh else ''
+                else:
+                    workshop_activity = f"{workshop_en if workshop_en else ''} {workshop_zh if workshop_zh else ''}"
+                
+                speaker_name = meeting['workshop_speaker_en'] if (lang == 'en' and meeting['workshop_speaker_en']) else workshop_speaker
+
+                if workshop_activity:
+                    workshop_activity += f" ({speaker_name})"
+                else:
+                    workshop_activity = f"Workshop ({speaker_name})"
+                
+                agenda.append({
+                    "time": f"{current_min//60:02d}:{current_min%60:02d}",
+                    "end_time": f"{(current_min + workshop_duration)//60:02d}:{(current_min + workshop_duration)%60:02d}",
+                    "phase": "workshop",
+                    "activity": workshop_activity,
+                    "duration": workshop_duration,
+                    "role": speaker_name
+                })
+                current_min += workshop_duration
+            continue
+        
+        for tpl in templates:
+            template_role = tpl['role']
+            if '(' in template_role and ')' in template_role:
+                role_name_for_lookup = template_role.split('(')[0]
+            else:
+                role_name_for_lookup = template_role
+            
+            member = get_role_member(reg_dict, role_name_for_lookup)
+            
+            if lang == 'en':
+                activity = tpl.get('activity_en', tpl.get('activity_zh', ''))
+            else:
+                activity = tpl.get('activity_zh', tpl.get('activity_en', ''))
+            
+            agenda.append({
+                "time": f"{current_min//60:02d}:{current_min%60:02d}",
+                "end_time": f"{(current_min + tpl.get('duration', 0))//60:02d}:{(current_min + tpl.get('duration', 0))%60:02d}",
+                "phase": phase_key,
+                "activity": activity,
+                "duration": tpl.get('duration', 0),
+                "role": member if member else ('TBD' if tpl.get('duration', 0) > 0 else '-')
+            })
+            current_min += tpl.get('duration', 0)
+    
+    meeting_manager_name = reg_dict.get('会议经理', '')
+    
+    conn.close()
+    return render_template('agenda_poster.html', meeting=meeting, agenda=agenda, PHASE_CONFIG=PHASE_CONFIG, meeting_manager_name=meeting_manager_name, reg_dict=reg_dict)
 
 @app.route('/meeting/<int:meeting_db_id>/agenda')
 def generate_agenda(meeting_db_id):

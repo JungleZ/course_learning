@@ -84,8 +84,11 @@
         <!-- 生成Agenda按钮 -->
         <div class="card shadow-sm mt-4">
             <div class="card-body text-center">
-                <a href="{{ url_for('generate_agenda', meeting_db_id=meeting.id) }}" class="btn btn-success btn-lg w-100">
-                    <i class="bi bi-calendar-check me-2"></i>{% if lang == 'en' %}Generate 6-Phase Agenda{% elif lang == 'both' %}生成6阶段会议Agenda Generate 6-Phase Agenda{% else %}生成6阶段会议议程{% endif %}
+                <a href="{{ url_for('generate_agenda', meeting_db_id=meeting.id) }}" class="btn btn-success btn-lg w-100 mb-2">
+                    <i class="bi bi-calendar-check me-2"></i>{% if lang == 'en' %}6-Phase Agenda{% elif lang == 'both' %}6阶段议程{% else %}生成6阶段会议议程{% endif %}
+                </a>
+                <a href="{{ url_for('generate_agenda_poster', meeting_db_id=meeting.id) }}" class="btn btn-danger btn-lg w-100">
+                    <i class="bi bi-award me-2"></i>{% if lang == 'en' %}Agenda Poster{% elif lang == 'both' %}海报议程{% else %}生成海报议程{% endif %}
                 </a>
                 <div class="form-text mt-2">
                     {% if lang == 'en' %}Auto-generate complete agenda with sign-in, table topics, speeches, break, evaluation, closing
