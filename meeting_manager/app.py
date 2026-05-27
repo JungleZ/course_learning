@@ -1399,18 +1399,11 @@ def register():
                                   (meeting_db_id, role_name)).fetchone()
         
         if existing_reg:
-            flash(f'角色 {role_name} 已被 {existing_reg["member_name"]} 报名！', 'danger')
-            return redirect(url_for('meeting_detail', meeting_db_id=meeting_db_id))
-        
-        user_regs = conn.execute('SELECT * FROM registrations WHERE meeting_id = ? AND member_name = ?', 
-                                (meeting_db_id, member_name)).fetchall()
-        
-        if user_regs:
-            flash(f'您已在本次会议报名了 {user_regs[0]["role_name"]}，请勿重复报名！', 'warning')
-            return redirect(url_for('meeting_detail', meeting_db_id=meeting_db_id))
-        
-        conn.execute("INSERT INTO registrations (meeting_id, role_name, member_name) VALUES (?, ?, ?)",
-                    (meeting_db_id, role_name, member_name))
+            conn.execute("UPDATE registrations SET member_name = ? WHERE meeting_id = ? AND role_name = ?",
+                        (member_name, meeting_db_id, role_name))
+        else:
+            conn.execute("INSERT INTO registrations (meeting_id, role_name, member_name) VALUES (?, ?, ?)",
+                        (meeting_db_id, role_name, member_name))
         conn.commit()
         flash(f'成功报名角色 {role_name}！', 'success')
     except Exception as e:
