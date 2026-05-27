@@ -1497,7 +1497,10 @@ def register():
     conn = get_db_connection()
     try:
         existing_member = conn.execute('SELECT * FROM members WHERE name = ?', (member_name,)).fetchone()
-        if not existing_member:
+        if existing_member:
+            if existing_member['is_member'] != is_member:
+                conn.execute("UPDATE members SET is_member = ? WHERE name = ?", (is_member, member_name))
+        else:
             conn.execute("INSERT INTO members (name, is_member) VALUES (?, ?)", (member_name, is_member))
         
         existing_reg = conn.execute('SELECT * FROM registrations WHERE meeting_id = ? AND role_name = ?', 
