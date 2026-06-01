@@ -1115,15 +1115,9 @@ def update_club_name(meeting_db_id):
     conn.close()
     return jsonify({'success': True, 'club_name': club_name})
 
-@app.route('/meeting/<int:meeting_db_id>/poster')
-def generate_agenda_poster(meeting_db_id):
-    lang = request.args.get('lang', session.get('lang', 'zh'))
-    conn = get_db_connection()
+def _build_agenda_data(meeting_db_id, lang, conn):
+    """Build agenda data shared by poster routes."""
     meeting = conn.execute('SELECT * FROM meetings WHERE id = ?', (meeting_db_id,)).fetchone()
-    if not meeting:
-        conn.close()
-        flash('会议不存在！', 'danger')
-        return redirect(url_for('index'))
     
     regs = conn.execute('SELECT role_name, member_name FROM registrations WHERE meeting_id = ?', (meeting_db_id,)).fetchall()
     reg_dict = {r['role_name']: r['member_name'] for r in regs}
@@ -1213,7 +1207,6 @@ def generate_agenda_poster(meeting_db_id):
             })
             current_min += tpl.get('duration', 0)
         
-        # Speech: dynamic PS entries
         if phase_key == 'speech':
             ps_projects = {}
             for row in conn.execute('SELECT role_name, project FROM registrations WHERE meeting_id = ? AND (role_name LIKE ? OR role_name LIKE ?)',
@@ -1265,7 +1258,6 @@ def generate_agenda_poster(meeting_db_id):
                     })
                     current_min += duration
         
-        # Evaluation: dynamic IE entries
         if phase_key == 'evaluation':
             for i in range(1, 5):
                 ie_member = None
@@ -1293,9 +1285,35 @@ def generate_agenda_poster(meeting_db_id):
                     current_min += 3
     
     meeting_manager_name = reg_dict.get('会议经理', '')
-    
+    return meeting, agenda, meeting_manager_name, reg_dict
+
+
+@app.route('/meeting/<int:meeting_db_id>/poster')
+def generate_agenda_poster(meeting_db_id):
+    lang = request.args.get('lang', session.get('lang', 'zh'))
+    conn = get_db_connection()
+    meeting = conn.execute('SELECT * FROM meetings WHERE id = ?', (meeting_db_id,)).fetchone()
+    if not meeting:
+        conn.close()
+        flash('会议不存在！', 'danger')
+        return redirect(url_for('index'))
+    meeting, agenda, meeting_manager_name, reg_dict = _build_agenda_data(meeting_db_id, lang, conn)
     conn.close()
     return render_template('agenda_poster.html', meeting=meeting, agenda=agenda, PHASE_CONFIG=PHASE_CONFIG, meeting_manager_name=meeting_manager_name, reg_dict=reg_dict)
+
+
+@app.route('/meeting/<int:meeting_db_id>/poster/v2')
+def generate_agenda_poster_v2(meeting_db_id):
+    lang = request.args.get('lang', session.get('lang', 'zh'))
+    conn = get_db_connection()
+    meeting = conn.execute('SELECT * FROM meetings WHERE id = ?', (meeting_db_id,)).fetchone()
+    if not meeting:
+        conn.close()
+        flash('会议不存在！', 'danger')
+        return redirect(url_for('index'))
+    meeting, agenda, meeting_manager_name, reg_dict = _build_agenda_data(meeting_db_id, lang, conn)
+    conn.close()
+    return render_template('agenda_poster_v2.html', meeting=meeting, agenda=agenda, PHASE_CONFIG=PHASE_CONFIG, meeting_manager_name=meeting_manager_name, reg_dict=reg_dict)
 
 @app.route('/meeting/<int:meeting_db_id>/agenda')
 def generate_agenda(meeting_db_id):
