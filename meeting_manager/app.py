@@ -1205,6 +1205,85 @@ def generate_agenda_poster(meeting_db_id):
                 "role": member if member else ('TBD' if tpl.get('duration', 0) > 0 else '-')
             })
             current_min += tpl.get('duration', 0)
+        
+        # Speech: dynamic PS entries
+        if phase_key == 'speech':
+            ps_projects = {}
+            for row in conn.execute('SELECT role_name, project FROM registrations WHERE meeting_id = ? AND (role_name LIKE ? OR role_name LIKE ?)',
+                                   (meeting_db_id, '%备稿演讲%', '%PS%')).fetchall():
+                ps_projects[row['role_name']] = row['project'] or ''
+            for i in range(1, 5):
+                ps_member = None
+                for role_name, member in reg_dict.items():
+                    if f'备稿演讲{i}' in role_name or f'PS{i}' in role_name:
+                        ps_member = member
+                        break
+                if ps_member:
+                    tom_member = None
+                    for role_name, member in reg_dict.items():
+                        if '总主持' in role_name or 'TOM' in role_name:
+                            tom_member = member
+                            break
+                    if lang == 'en':
+                        intro = f"Brief introduction ({tom_member or 'TOM'})"
+                    elif lang == 'zh':
+                        intro = f"演讲介绍（{tom_member or 'TOM'}）"
+                    else:
+                        intro = f"Brief introduction 演讲介绍（{tom_member or 'TOM'}）"
+                    agenda.append({
+                        "time": f"{current_min//60:02d}:{current_min%60:02d}",
+                        "end_time": f"{(current_min + 1)//60:02d}:{(current_min + 1)%60:02d}",
+                        "phase": phase_key,
+                        "activity": intro,
+                        "duration": 1,
+                        "role": tom_member or 'TBD'
+                    })
+                    current_min += 1
+                    proj = ps_projects.get(f'备稿演讲{i}', ps_projects.get(f'PS{i}', ''))
+                    proj_str = f' {proj}' if proj else ''
+                    if lang == 'en':
+                        act = f"PS{i} Prepared Speech {i}{proj_str} ({ps_member})"
+                    elif lang == 'zh':
+                        act = f"PS{i} 备稿演讲{i}{proj_str}（{ps_member}）"
+                    else:
+                        act = f"PS{i} Prepared Speech 备稿演讲{i}{proj_str}（{ps_member}）"
+                    duration = 7 if i < 4 else 15
+                    agenda.append({
+                        "time": f"{current_min//60:02d}:{current_min%60:02d}",
+                        "end_time": f"{(current_min + duration)//60:02d}:{(current_min + duration)%60:02d}",
+                        "phase": phase_key,
+                        "activity": act,
+                        "duration": duration,
+                        "role": ps_member
+                    })
+                    current_min += duration
+        
+        # Evaluation: dynamic IE entries
+        if phase_key == 'evaluation':
+            for i in range(1, 5):
+                ie_member = None
+                ps_member = None
+                for role_name, member in reg_dict.items():
+                    if f'个评{i}' in role_name or f'IE{i}' in role_name:
+                        ie_member = member
+                    if f'备稿演讲{i}' in role_name or f'PS{i}' in role_name:
+                        ps_member = member
+                if ie_member:
+                    if lang == 'en':
+                        act = f"IE{i} Evaluation for {ps_member or 'Speech '+str(i)} ({ie_member})"
+                    elif lang == 'zh':
+                        act = f"IE{i} 点评{ps_member or '演讲'+str(i)}（{ie_member}）"
+                    else:
+                        act = f"IE{i} Evaluation 点评{ps_member or '演讲'+str(i)}（{ie_member}）"
+                    agenda.append({
+                        "time": f"{current_min//60:02d}:{current_min%60:02d}",
+                        "end_time": f"{(current_min + 3)//60:02d}:{(current_min + 3)%60:02d}",
+                        "phase": phase_key,
+                        "activity": act,
+                        "duration": 3,
+                        "role": ie_member
+                    })
+                    current_min += 3
     
     meeting_manager_name = reg_dict.get('会议经理', '')
     
