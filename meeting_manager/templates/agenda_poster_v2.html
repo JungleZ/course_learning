@@ -10,16 +10,24 @@
         </button>
     </div>
 
-    {# ===== Header ===== #}
-    <div class="v2-header">
-        <div class="v2-header-left">
-            <div class="v2-club-name">Foshan English Talks</div>
-            <div class="v2-meeting-no">{{ meeting.meeting_id }}</div>
+    {# ===== Brand Banner with header overlay ===== #}
+    <div class="v2-banner">
+        <img src="{{ url_for('static', filename='blue_logo.png') }}" alt="Toastmasters" class="v2-banner-img">
+        <div class="v2-banner-overlay">
+            <div class="v2-banner-center">
+                <div class="v2-club-name-zh">佛山启思国际演讲俱乐部</div>
+                <div class="v2-club-name-en">(Foshan Cheers International Toastmasters Club)</div>
+            </div>
+            <div class="v2-banner-bottom">
+                <div class="v2-tm-intro">{% if lang == 'en' %}Toastmasters International, founded in 1924, is a global nonprofit with 14,700+ clubs across 144+ countries and 280,000 members, dedicated to fostering communication and leadership skills in a supportive environment.{% else %}头马国际演讲会（Toastmasters International），是一个国际性非盈利的公益教育组织，成立于1924年的美国，目前在全球144多个国家，有14700多个俱乐部，28万会员，使命是提供积极互助的成长环境，让成员从中有效地训练沟通力和领导力，从而增强自信，收获友谊，实现个人成长。{% endif %}</div>
+            </div>
         </div>
-        <div class="v2-header-right">
-            <div class="v2-theme-label">{% if lang == 'en' %}Theme{% else %}主题{% endif %}</div>
-            <div class="v2-theme-text">{{ meeting.theme or meeting.english_theme or 'TBD' }}</div>
-        </div>
+    </div>
+
+    {# ===== Theme Bar with meeting number ===== #}
+    <div class="v2-theme-bar">
+        <span class="v2-meeting-tag">#{{ meeting.meeting_id.split('#')[-1].split()[-1] if '#' in meeting.meeting_id else meeting.meeting_id }}</span>
+        <span class="v2-theme-text">{{ meeting.theme or meeting.english_theme or 'TBD' }}</span>
     </div>
 
     {# ===== Meta Row ===== #}
@@ -48,20 +56,16 @@
         {# ===== Left Sidebar ===== #}
         <div class="v2-sidebar">
             <div class="v2-sidebar-card">
-                <div class="v2-sidebar-card-title">{% if lang == 'en' %}About Us{% else %}关于我们{% endif %}</div>
-                <div class="v2-sidebar-card-body">
-                    <div class="v2-slogan">"Bring the world into the speech!"</div>
-                    <p>佛山英文说 Toastmasters 国际演讲会是一个公开的俱乐部，向所有希望提升公众演讲和领导力技能的朋友敞开大门。</p>
-                </div>
-            </div>
-
-            <div class="v2-sidebar-card">
-                <div class="v2-sidebar-card-title">{% if lang == 'en' %}Club Info{% else %}俱乐部信息{% endif %}</div>
-                <div class="v2-sidebar-card-body">
-                    <div class="v2-info-row"><span>🕒</span><span>{% if lang == 'en' %}Every Sun 15:00-17:00{% else %}每周日 15:00-17:00{% endif %}</span></div>
-                    <div class="v2-info-row"><span>💰</span><span>{% if lang == 'en' %}Member Free | Guest ¥30{% else %}会员免费 | 嘉宾 ¥30/人{% endif %}</span></div>
-                    <div class="v2-info-row"><span>📍</span><span>{% if lang == 'en' %}Nanhai Youth Home{% else %}南海青年之家{% endif %}</span></div>
-                    <div class="v2-info-row"><span>🌐</span><span>{% if lang == 'en' %}Bilingual{% else %}中英双语{% endif %}</span></div>
+                <div class="v2-sidebar-card-title">关于佛山启思</div>
+                <div class="v2-sidebar-card-body v2-about-body">
+                    <div class="v2-about-line"><strong>愿景：</strong>成为中区最有影响力的头马俱乐部之一</div>
+                    <div class="v2-about-line"><strong>使命：</strong>充分了解会员和嘉宾的需求，为大家创造一个轻松愉快的成长环境和平台，让每一位会员都有阶段性成长和收获。</div>
+                    <div class="v2-about-line"><strong>价值观：</strong>坦诚 成长 快乐 感恩</div>
+                    <div class="v2-about-line"><strong>口号：</strong>打造快乐竞争力</div>
+                    <div class="v2-about-line"><strong>语言：</strong>双语（一周中文，一周英文）</div>
+                    <div class="v2-about-line"><strong>例会时间：</strong>每周日 14:30-17:00</div>
+                    <div class="v2-about-line"><strong>地点：</strong>佛山市禅城区博士与博士后创新孵化基地5楼休闲厅</div>
+                    <div class="v2-about-line"><strong>收费须知：</strong>头马会员免费；常规例会非头马会员：30元/次/人（用于分担例会场地使用费）。</div>
                 </div>
             </div>
 
@@ -135,34 +139,41 @@
         </div>
     </div>
 
-    {# ===== Footer: Officers + QR ===== #}
+    {# ===== Footer: Officers + Join + QR ===== #}
     <div class="v2-footer">
         <div class="v2-footer-officers">
             <div class="v2-footer-title">{% if lang == 'en' %}Officer Team{% else %}官员团队{% endif %}</div>
             <div class="v2-officer-grid">
-                <div><span class="v2-officer-role">President</span><span class="v2-officer-name">Bass</span></div>
-                <div><span class="v2-officer-role">VPE</span><span class="v2-officer-name">Luke</span></div>
-                <div><span class="v2-officer-role">VPM</span><span class="v2-officer-name">Jager</span></div>
-                <div><span class="v2-officer-role">VPPR</span><span class="v2-officer-name">Rosen</span></div>
-                <div><span class="v2-officer-role">Secretary</span><span class="v2-officer-name">Amy</span></div>
-                <div><span class="v2-officer-role">Treasurer</span><span class="v2-officer-name">Chloe</span></div>
-                <div><span class="v2-officer-role">SAA</span><span class="v2-officer-name">Lion</span></div>
+                <div><span class="v2-officer-role">President 会长</span><span class="v2-officer-name">邓婷婷 (Tina Deng)</span></div>
+                <div><span class="v2-officer-role">VPE 文教副会长</span><span class="v2-officer-name">张腾飞 (Tengfoot Zhang)</span></div>
+                <div><span class="v2-officer-role">VPM 会员副会长</span><span class="v2-officer-name">叶文俊 (Alex Ye)</span></div>
+                <div><span class="v2-officer-role">VPPR 公关副会长</span><span class="v2-officer-name">郑润华 (Anna Zheng)</span></div>
+                <div><span class="v2-officer-role">Secretary 秘书长</span><span class="v2-officer-name">区宇俊 (Ulysses Ou)</span></div>
+                <div><span class="v2-officer-role">Treasurer 财务长</span><span class="v2-officer-name">林绮琪 (Miki Lin)</span></div>
+                <div><span class="v2-officer-role">SAA 事务长</span><span class="v2-officer-name">曾学明 (Mike Zeng)</span></div>
+            </div>
+        </div>
+        <div class="v2-footer-join">
+            <div class="v2-footer-title">{% if lang == 'en' %}How to Join{% else %}如何加入我们{% endif %}</div>
+            <div class="v2-join-body">
+                <div>参加例会至少3次、担任角色至少2次</div>
+                <div>填写入会申请、通过团队面试，缴纳会费。</div>
+                <div class="v2-join-cta">更多详情请咨询会员副主席 Lulu。</div>
+            </div>
+            <div class="v2-officer-vpm">
+                <img src="{{ url_for('static', filename='vpm_pic.jpg') }}" alt="VPM" class="v2-vpm-img">
             </div>
         </div>
         <div class="v2-footer-qr">
             <div class="v2-footer-title">{% if lang == 'en' %}Interactive Zone{% else %}互动区{% endif %}</div>
             <div class="v2-qr-items">
-                <div class="v2-qr-item">
+                <div class="v2-qr-item v2-qr-item-main">
                     <div class="v2-qr-label">官方公众号</div>
-                    <img src="{{ url_for('static', filename='officials.jpg') }}" alt="Officials" class="v2-qr-img">
-                </div>
-                <div class="v2-qr-item">
-                    <div class="v2-qr-label">VPM</div>
-                    <img src="{{ url_for('static', filename='qrcode_wechat.png') }}" alt="QR Code" class="v2-qr-img">
+                    <img src="{{ url_for('static', filename='cheers_officials.jpg') }}" alt="Officials" class="v2-qr-img">
                 </div>
                 <div class="v2-qr-item">
                     <div class="v2-qr-label">财务收款</div>
-                    <img src="{{ url_for('static', filename='hebao.jpg') }}" alt="Finance" class="v2-qr-img">
+                    <img src="{{ url_for('static', filename='cheers_hebao.jpg') }}" alt="Finance" class="v2-qr-img">
                 </div>
             </div>
         </div>
@@ -177,15 +188,15 @@
 <style>
 /* ===== V2 Poster - Modern Clean Style ===== */
 :root {
-    --v2-primary: #0d4f4f;
-    --v2-primary-light: #1a6e6e;
+    --v2-primary: #004165;
+    --v2-primary-light: #1a5a80;
     --v2-accent: #f4a261;
     --v2-accent-light: #fae1c6;
-    --v2-bg: #f5f7fa;
+    --v2-bg: #f0f4f8;
     --v2-card: #ffffff;
     --v2-text: #2d3748;
     --v2-text-light: #718096;
-    --v2-border: #e2e8f0;
+    --v2-border: #d0d9e2;
     --v2-green: #48bb78;
     --v2-yellow: #ecc94b;
     --v2-red: #f56565;
@@ -193,17 +204,45 @@
 
 .v2-poster { background: var(--v2-bg); padding: 12px; border-radius: 12px; }
 
-/* ===== Header ===== */
-.v2-header {
-    background: linear-gradient(135deg, var(--v2-primary), var(--v2-primary-light));
-    color: #fff; border-radius: 12px 12px 0 0; padding: 14px 20px;
-    display: flex; justify-content: space-between; align-items: center;
+/* ===== Banner (merged with header overlay) ===== */
+.v2-banner { position: relative; line-height: 0; }
+.v2-banner-img { width: 100%; height: auto; display: block; border-radius: 12px 12px 0 0; }
+.v2-banner-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; padding: 8px 16px;
+    pointer-events: none;
 }
-.v2-club-name { font-size: 14px; font-weight: 700; letter-spacing: 0.5px; opacity: 0.9; }
-.v2-meeting-no { font-size: 22px; font-weight: 800; margin-top: 2px; }
-.v2-header-right { text-align: right; }
-.v2-theme-label { font-size: 9px; text-transform: uppercase; opacity: 0.7; letter-spacing: 1px; }
-.v2-theme-text { font-size: 14px; font-weight: 700; }
+.v2-banner-center {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+}
+.v2-club-name-zh {
+    font-size: 11px; font-weight: 800; color: #d4a843;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6); letter-spacing: 1px;
+    line-height: 1.4; margin-bottom: 4px;
+}
+.v2-club-name-en {
+    font-size: 7.5px; font-weight: 600; color: #d4a843;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.6); letter-spacing: 0.5px;
+    line-height: 1.4;
+}
+.v2-banner-bottom {
+    text-align: right; padding-bottom: 4px; margin-top: auto;
+}
+.v2-tm-intro {
+    font-size: 6.8px; line-height: 1.5; color: #000;
+    text-align: justify; display: inline-block; max-width: 60%;
+    background: rgba(255,255,255,0.6); padding: 2px 8px; border-radius: 3px;
+    margin-left: auto;
+}
+
+/* ===== Theme Bar ===== */
+.v2-theme-bar {
+    background: var(--v2-primary-light); color: #fff;
+    padding: 5px 16px; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.v2-theme-bar .v2-meeting-tag { font-size: 11px; font-weight: 700; color: #d4a843; }
+.v2-theme-bar .v2-theme-text { font-size: 11px; font-weight: 700; color: #d4a843; }
 
 /* ===== Meta ===== */
 .v2-meta {
@@ -227,7 +266,7 @@
 .v2-sidebar {
     width: 34%; min-width: 34%; flex-shrink: 0;
     border-right: 2px solid var(--v2-primary);
-    padding: 8px; display: flex; flex-direction: column; gap: 6px;
+    padding: 5px; display: flex; flex-direction: column; gap: 4px;
     background: #fafcfc;
 }
 .v2-sidebar-card {
@@ -239,10 +278,9 @@
     letter-spacing: 0.3px;
 }
 .v2-sidebar-card-body { padding: 6px 10px; font-size: 8px; color: var(--v2-text); }
-.v2-slogan { font-size: 9px; font-style: italic; color: var(--v2-primary); font-weight: 700; margin-bottom: 4px; }
 .v2-sidebar-card-body p { margin: 0; line-height: 1.4; }
-.v2-info-row { display: flex; align-items: center; gap: 4px; padding: 1px 0; font-size: 8px; }
-.v2-info-row span:first-child { font-size: 9px; }
+.v2-about-body { padding: 4px 6px; }
+.v2-about-line { font-size: 6.5px; line-height: 1.4; padding: 0.5px 0; }
 .v2-timing-body { padding: 4px 6px; }
 .v2-timing-table { width: 100%; border-collapse: collapse; font-size: 7px; }
 .v2-timing-table th, .v2-timing-table td { border: 1px solid var(--v2-border); padding: 1px 3px; text-align: center; }
@@ -258,7 +296,7 @@
 }
 
 /* ===== Agenda Table ===== */
-.v2-agenda { flex: 1; padding: 8px; min-width: 0; }
+.v2-agenda { flex: 1; padding: 5px; min-width: 0; }
 .v2-agenda-table {
     width: 100%; border-collapse: collapse; font-size: 9px;
     border: 1px solid var(--v2-border);
@@ -290,13 +328,22 @@
     display: flex; border: 2px solid var(--v2-primary); border-top: none;
 }
 .v2-footer-officers {
-    width: 55%; padding: 10px 14px;
+    width: 30%; padding: 6px 8px;
     background: var(--v2-primary); color: #fff;
     border-right: 1px solid rgba(255,255,255,0.15);
 }
+.v2-footer-join {
+    width: 25%; padding: 6px 8px;
+    background: var(--v2-primary); color: #fff;
+    border-right: 1px solid rgba(255,255,255,0.15);
+    display: flex; flex-direction: column;
+}
+.v2-join-body { font-size: 7px; line-height: 1.6; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+.v2-join-cta { margin-top: 3px; font-weight: 700; color: var(--v2-accent); }
 .v2-footer-qr {
     width: 45%; padding: 10px 14px;
     background: var(--v2-primary); color: #fff;
+    display: flex; flex-direction: column; justify-content: center;
 }
 .v2-footer-title {
     font-size: 9px; font-weight: 700; color: var(--v2-accent);
@@ -308,8 +355,11 @@
 .v2-officer-grid div { display: flex; justify-content: space-between; font-size: 8px; padding: 1px 0; }
 .v2-officer-role { color: rgba(255,255,255,0.6); }
 .v2-officer-name { color: #fff; font-weight: 600; }
-.v2-qr-items { display: flex; gap: 4px; }
-.v2-qr-item { flex: 1; text-align: center; background: #fff; border-radius: 4px; padding: 3px; }
+.v2-officer-vpm { margin-top: 5px; text-align: center; }
+.v2-vpm-img { width: 80%; height: auto; max-height: 60px; object-fit: contain; border-radius: 4px; display: block; margin: 0 auto; }
+.v2-qr-items { display: flex; gap: 6px; justify-content: center; }
+.v2-qr-item { flex: 1; text-align: center; background: #fff; border-radius: 4px; padding: 3px; display: flex; flex-direction: column; justify-content: center; }
+.v2-qr-item-main { flex: 2; }
 .v2-qr-label { font-size: 6px; color: #000; text-align: center; margin-bottom: 2px; white-space: nowrap; }
 .v2-qr-img { width: 100%; height: auto; display: block; }
 .v2-footer-tm {
@@ -324,9 +374,12 @@
     body { background: #fff !important; }
     .container { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
     .v2-poster { background: #fff !important; border-radius: 0 !important; padding: 0 !important; }
-    .v2-header, .v2-meta, .v2-main, .v2-footer,
+    .v2-banner-img { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .v2-banner-overlay, .v2-theme-bar, .v2-meta, .v2-main, .v2-footer,
     .v2-phase-cell, .v2-agenda-table thead th,
     .v2-sidebar-card-title { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .v2-tm-intro { color: #000 !important; }
+    .v2-club-name-zh, .v2-club-name-en { color: #d4a843 !important; }
     .no-print { display: none !important; }
     .v2-agenda-table { font-size: 8px; }
     .v2-td-time, .v2-td-activity, .v2-td-min, .v2-td-speaker { font-size: 8px !important; padding: 1px 2px !important; }
