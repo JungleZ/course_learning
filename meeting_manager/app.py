@@ -1190,6 +1190,8 @@ def generate_agenda_poster(meeting_db_id):
                 role_name_for_lookup = template_role
             
             member = get_role_member(reg_dict, role_name_for_lookup)
+            if not member and tpl.get('default_member'):
+                member = tpl['default_member']
             
             if lang == 'en':
                 activity = tpl.get('activity_en', tpl.get('activity_zh', ''))
