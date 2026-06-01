@@ -240,7 +240,7 @@ PHASE_TEMPLATES = {
         {"activity_zh": "哼哈官报告", "activity_en": "Ah-Counter report", "duration": 2, "role": "哼哈官(Ah-Counter)"},
         {"activity_zh": "总点评报告", "activity_en": "General evaluator report", "duration": 7, "role": "总点评(GE)"},
         {"activity_zh": "最佳投票", "activity_en": "Vote for the Best", "duration": 1, "role": "总主持(TOM)"},
-        {"activity_zh": "嘉宾分享", "activity_en": "Guest sharing", "duration": 3, "role": "嘉宾分享(Guest Sharing)", "default_member": "Bass"},
+        {"activity_zh": "嘉宾分享", "activity_en": "Guest sharing", "duration": 3, "role": "嘉宾分享(Guest Sharing)"},
         {"activity_zh": "颁奖环节", "activity_en": "Awarding time", "duration": 3, "role": "President", "default_member": "Bass"},
         {"activity_zh": "闭幕词", "activity_en": "Closing remarks", "duration": 2, "role": "President", "default_member": "Bass"},
         {"activity_zh": "角色预订", "activity_en": "Role booking", "duration": 1, "role": "会议经理(MM)"},
