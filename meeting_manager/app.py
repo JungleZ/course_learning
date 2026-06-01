@@ -314,6 +314,10 @@ def init_db():
             FOREIGN KEY (meeting_id) REFERENCES meetings(id),
             UNIQUE(meeting_id, role_name)
         )""")
+        cursor.execute("PRAGMA table_info(registrations)")
+        reg_cols = [col[1] for col in cursor.fetchall()]
+        if 'project' not in reg_cols:
+            cursor.execute("ALTER TABLE registrations ADD COLUMN project TEXT DEFAULT ''")
         cursor.execute("""CREATE TABLE IF NOT EXISTS custom_activities (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             meeting_id INTEGER NOT NULL,
@@ -1028,7 +1032,7 @@ def meeting_detail(meeting_db_id):
     
     lang = session.get('lang', 'zh')
     
-    roles = conn.execute("""SELECT mr.role_name, r.description, reg.member_name, m.is_member
+    roles = conn.execute("""SELECT mr.role_name, r.description, reg.member_name, m.is_member, reg.project
         FROM meeting_roles mr
         LEFT JOIN registrations reg ON mr.meeting_id = reg.meeting_id AND mr.role_name = reg.role_name
         LEFT JOIN members m ON reg.member_name = m.name
@@ -1072,7 +1076,8 @@ def meeting_detail(meeting_db_id):
             'is_member': is_member_val,
             'member_only': member_only,
             'is_default_assigned': is_default_assigned,
-            'has_registration': role['member_name'] is not None  # 标记是否有人真正报名
+            'has_registration': role['member_name'] is not None,
+            'project': role['project'] or ''
         })
     
     registered_members = conn.execute("""SELECT reg.member_name, m.is_member, GROUP_CONCAT(reg.role_name) as roles
@@ -1316,10 +1321,13 @@ def generate_agenda(meeting_db_id):
         
         # Speech: dynamic PS entries
         if phase_key == 'speech':
+            ps_projects = {}
+            for row in conn.execute('SELECT role_name, project FROM registrations WHERE meeting_id = ? AND (role_name LIKE ? OR role_name LIKE ?)',
+                                   (meeting_db_id, '%备稿演讲%', '%PS%')).fetchall():
+                ps_projects[row['role_name']] = row['project'] or ''
             for i in range(1, 5):
                 # Find matching PS role in reg_dict - support both formats
                 ps_member = None
-                for role_name, member in reg_dict.items():
                     if f'备稿演讲{i}' in role_name or f'PS{i}' in role_name:
                         ps_member = member
                         break
@@ -1349,12 +1357,14 @@ def generate_agenda(meeting_db_id):
                     current_min += 1
                     
                     # PS speech
+                    proj = ps_projects.get(f'备稿演讲{i}', ps_projects.get(f'PS{i}', ''))
+                    proj_str = f' {proj}' if proj else ''
                     if lang == 'en':
-                        act = f"PS{i} Prepared Speech {i} ({ps_member})"
+                        act = f"PS{i} Prepared Speech {i}{proj_str} ({ps_member})"
                     elif lang == 'zh':
-                        act = f"PS{i} 备稿演讲{i}（{ps_member}）"
+                        act = f"PS{i} 备稿演讲{i}{proj_str}（{ps_member}）"
                     else:
-                        act = f"PS{i} Prepared Speech 备稿演讲{i}（{ps_member}）"
+                        act = f"PS{i} Prepared Speech 备稿演讲{i}{proj_str}（{ps_member}）"
                     
                     duration = 7 if i < 4 else 15  # last speech longer
                     agenda.append({
@@ -1488,6 +1498,7 @@ def register():
     role_name = request.form['role_name']
     member_name = request.form['member_name']
     is_member = request.form.get('is_member', '0') == '1'
+    project = request.form.get('project', '').strip()
     
     # 检查是否会员专属角色
     if is_member_only_role(role_name) and not is_member:
@@ -1507,11 +1518,11 @@ def register():
                                   (meeting_db_id, role_name)).fetchone()
         
         if existing_reg:
-            conn.execute("UPDATE registrations SET member_name = ? WHERE meeting_id = ? AND role_name = ?",
-                        (member_name, meeting_db_id, role_name))
+            conn.execute("UPDATE registrations SET member_name = ?, project = ? WHERE meeting_id = ? AND role_name = ?",
+                        (member_name, project, meeting_db_id, role_name))
         else:
-            conn.execute("INSERT INTO registrations (meeting_id, role_name, member_name) VALUES (?, ?, ?)",
-                        (meeting_db_id, role_name, member_name))
+            conn.execute("INSERT INTO registrations (meeting_id, role_name, member_name, project) VALUES (?, ?, ?, ?)",
+                        (meeting_db_id, role_name, member_name, project))
         conn.commit()
         flash(f'成功报名角色 {role_name}！', 'success')
     except Exception as e:
@@ -1533,4 +1544,4 @@ def get_meeting_roles(meeting_db_id):
     return jsonify([dict(role) for role in roles])
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8082, debug=True)
+    app.run(host='0.0.0.0', port=8083, debug=True)
