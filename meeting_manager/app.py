@@ -1328,6 +1328,7 @@ def generate_agenda(meeting_db_id):
             for i in range(1, 5):
                 # Find matching PS role in reg_dict - support both formats
                 ps_member = None
+                for role_name, member in reg_dict.items():
                     if f'备稿演讲{i}' in role_name or f'PS{i}' in role_name:
                         ps_member = member
                         break
