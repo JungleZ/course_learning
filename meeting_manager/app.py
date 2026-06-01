@@ -343,7 +343,12 @@ def get_db_connection():
     return conn
 
 def get_role_member(reg_dict, role_name):
-    return reg_dict.get(role_name, '')
+    if role_name in reg_dict:
+        return reg_dict[role_name]
+    for r in DEFAULT_ROLES:
+        if role_name in (r['name_zh'], r['name_en'], r['abbrev']):
+            return reg_dict.get(r['name_zh'], '')
+    return ''
 
 @app.route('/')
 def index():
